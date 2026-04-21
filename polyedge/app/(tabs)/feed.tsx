@@ -8,16 +8,15 @@ import { ErrorState, EmptyState } from '../../components/ErrorState';
 import { useMarkets, useMarketCategories } from '../../hooks/useMarkets';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'expo-router';
-import { useUserPreferences } from '../../services/userPreferences';
+import { usePreferencesStore } from '../../stores/usePreferencesStore';
 
 export default function FeedScreen() {
   const router = useRouter();
   const [selectedCategory, setSelectedCategory] = useState<string | undefined>();
   const [sortBy, setSortBy] = useState<'volume' | 'newest' | 'ending_soon'>('volume');
   
-  // For now, use mock user ID - in production, get from auth
-  const userId = 'user_mock_id';
-  const { preferences, isLoading: isLoadingPreferences } = useUserPreferences(userId);
+  // Get user preferences from store
+  const { categories: userCategories } = usePreferencesStore();
   
   const {
     data: markets,
@@ -33,7 +32,7 @@ export default function FeedScreen() {
   
   // Filter markets by user's category preferences
   const filteredMarkets = markets?.filter(market => {
-    if (!preferences.categories || preferences.categories.length === 0) {
+    if (!userCategories || userCategories.length === 0) {
       return true;
     }
     
@@ -41,14 +40,16 @@ export default function FeedScreen() {
     const marketCategory = market.category?.toLowerCase() || '';
     const marketQuestion = market.question?.toLowerCase() || '';
     
-    return preferences.categories.some(categoryId => {
+    return userCategories.some(categoryId => {
       const categoryMap: Record<string, string[]> = {
         sports: ['sports', 'football', 'basketball', 'baseball', 'soccer'],
         politics: ['politics', 'election', 'government'],
         crypto: ['crypto', 'bitcoin', 'ethereum', 'blockchain'],
         science: ['science', 'technology', 'space', 'climate'],
-        world_events: ['world', 'international', 'conflict'],
-        economics: ['economics', 'finance', 'stocks', 'economy'],
+        world_events: ['world', 'international', 'conflict', 'war'],
+        economics: ['economics', 'finance', 'stocks', 'economy', 'market'],
+        tech: ['tech', 'technology', 'ai', 'artificial intelligence', 'software'],
+        culture: ['culture', 'entertainment', 'movie', 'music', 'tv'],
       };
       
       const mappedCategories = categoryMap[categoryId] || [categoryId];
@@ -97,7 +98,7 @@ export default function FeedScreen() {
       <View style={styles.header}>
         <Text style={styles.title}>PolyEdge</Text>
         <View style={styles.headerButtons}>
-          {preferences.categories && preferences.categories.length > 0 && (
+          {userCategories && userCategories.length > 0 && (
             <View style={styles.filterBadge}>
               <Ionicons name="funnel" size={12} color={Colors.accent} />
             </View>
