@@ -1,9 +1,50 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/Colors';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { MarketCard } from '../../components/MarketCard';
+import { SkeletonCard } from '../../components/SkeletonCard';
+import { useMarkets, useMarketCategories } from '../../hooks/useMarkets';
+import { useState } from 'react';
 
 export default function FeedScreen() {
+  const [selectedCategory, setSelectedCategory] = useState<string | undefined>();
+  const [sortBy, setSortBy] = useState<'volume' | 'newest' | 'ending_soon'>('volume');
+  
+  const {
+    data: markets,
+    isLoading,
+    isError,
+    refetch,
+    isRefetching,
+  } = useMarkets({
+    category: selectedCategory,
+    sortBy,
+    limit: 20,
+  });
+  
+  const {
+    data: categories,
+    isLoading: isLoadingCategories,
+  } = useMarketCategories();
+
+  const handleCategoryPress = (category: string) => {
+    if (selectedCategory === category) {
+      setSelectedCategory(undefined);
+    } else {
+      setSelectedCategory(category);
+    }
+  };
+
+  const handleSortPress = (sort: 'volume' | 'newest' | 'ending_soon') => {
+    setSortBy(sort);
+  };
+
+  const handleMarketPress = (marketId: string) => {
+    // TODO: Navigate to market detail screen
+    console.log('Market pressed:', marketId);
+  };
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
@@ -13,56 +54,140 @@ export default function FeedScreen() {
         </TouchableOpacity>
       </View>
       
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        style={styles.scrollView} 
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefetching}
+            onRefresh={refetch}
+            tintColor={Colors.accent}
+            colors={[Colors.accent]}
+          />
+        }
+      >
+        <View style={styles.sortContainer}>
+          <TouchableOpacity 
+            style={[styles.sortChip, sortBy === 'volume' && styles.activeSortChip]}
+            onPress={() => handleSortPress('volume')}
+          >
+            <Text style={[styles.sortText, sortBy === 'volume' && styles.activeSortText]}>
+              Volume
+            </Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity 
+            style={[styles.sortChip, sortBy === 'newest' && styles.activeSortChip]}
+            onPress={() => handleSortPress('newest')}
+          >
+            <Text style={[styles.sortText, sortBy === 'newest' && styles.activeSortText]}>
+              Newest
+            </Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity 
+            style={[styles.sortChip, sortBy === 'ending_soon' && styles.activeSortChip]}
+            onPress={() => handleSortPress('ending_soon')}
+          >
+            <Text style={[styles.sortText, sortBy === 'ending_soon' && styles.activeSortText]}>
+              Ending Soon
+            </Text>
+          </TouchableOpacity>
+        </View>
+        
         <View style={styles.categoryContainer}>
-          {['All', 'Politics', 'Crypto', 'Sports', 'Science', 'Business'].map((category) => (
-            <TouchableOpacity key={category} style={styles.categoryChip}>
-              <Text style={styles.categoryText}>{category}</Text>
-            </TouchableOpacity>
-          ))}
+          <TouchableOpacity 
+            style={[styles.categoryChip, !selectedCategory && styles.activeCategoryChip]}
+            onPress={() => setSelectedCategory(undefined)}
+          >
+            <Text style={[styles.categoryText, !selectedCategory && styles.activeCategoryText]}>
+              All
+            </Text>
+          </TouchableOpacity>
+          
+          {isLoadingCategories ? (
+            <>
+              <View style={styles.categorySkeleton} />
+              <View style={styles.categorySkeleton} />
+              <View style={styles.categorySkeleton} />
+            </>
+          ) : (
+            categories?.map((category) => (
+              <TouchableOpacity 
+                key={category}
+                style={[
+                  styles.categoryChip, 
+                  selectedCategory === category && styles.activeCategoryChip
+                ]}
+                onPress={() => handleCategoryPress(category)}
+              >
+                <Text style={[
+                  styles.categoryText, 
+                  selectedCategory === category && styles.activeCategoryText
+                ]}>
+                  {category}
+                </Text>
+              </TouchableOpacity>
+            ))
+          )}
         </View>
         
         <View style={styles.content}>
-          <Text style={styles.placeholderText}>Hot Markets Feed</Text>
-          <Text style={styles.placeholderSubtext}>
-            This screen will show real Polymarket data sorted by volume
-          </Text>
+          {isError ? (
+            <View style={styles.errorContainer}>
+              <Ionicons name="alert-circle-outline" size={64} color={Colors.error} />
+              <Text style={styles.errorTitle}>Failed to load markets</Text>
+              <Text style={styles.errorSubtitle}>
+                Please check your connection and try again
+              </Text>
+              <TouchableOpacity style={styles.retryButton} onPress={() => refetch()}>
+                <Text style={styles.retryButtonText}>Retry</Text>
+              </TouchableOpacity>
+            </View>
+          ) : isLoading ? (
+            <>
+              <SkeletonCard />
+              <SkeletonCard />
+              <SkeletonCard />
+              <SkeletonCard />
+              <SkeletonCard />
+            </>
+          ) : markets && markets.length > 0 ? (
+            markets.map((market) => (
+              <MarketCard
+                key={market.id}
+                market={market}
+                onPress={() => handleMarketPress(market.id)}
+              />
+            ))
+          ) : (
+            <View style={styles.emptyContainer}>
+              <Ionicons name="flame-outline" size={64} color={Colors.textSecondary} />
+              <Text style={styles.emptyTitle}>No markets found</Text>
+              <Text style={styles.emptySubtitle}>
+                {selectedCategory 
+                  ? `No ${selectedCategory} markets available`
+                  : 'Try changing your filters'
+                }
+              </Text>
+            </View>
+          )}
           
-          <View style={styles.placeholderCard}>
-            <View style={styles.placeholderCardHeader}>
-              <View style={styles.placeholderCategory} />
-              <View style={styles.placeholderVolume} />
+          {markets && markets.length > 0 && (
+            <View style={styles.footer}>
+              <Text style={styles.footerText}>
+                Showing {markets.length} market{markets.length !== 1 ? 's' : ''}
+              </Text>
+              {selectedCategory && (
+                <TouchableOpacity 
+                  style={styles.clearFilterButton}
+                  onPress={() => setSelectedCategory(undefined)}
+                >
+                  <Text style={styles.clearFilterText}>Clear filter</Text>
+                </TouchableOpacity>
+              )}
             </View>
-            <View style={styles.placeholderQuestion} />
-            <View style={styles.placeholderPriceContainer}>
-              <View style={styles.placeholderPrice} />
-              <View style={styles.placeholderChange} />
-            </View>
-          </View>
-          
-          <View style={styles.placeholderCard}>
-            <View style={styles.placeholderCardHeader}>
-              <View style={styles.placeholderCategory} />
-              <View style={styles.placeholderVolume} />
-            </View>
-            <View style={styles.placeholderQuestion} />
-            <View style={styles.placeholderPriceContainer}>
-              <View style={styles.placeholderPrice} />
-              <View style={styles.placeholderChange} />
-            </View>
-          </View>
-          
-          <View style={styles.placeholderCard}>
-            <View style={styles.placeholderCardHeader}>
-              <View style={styles.placeholderCategory} />
-              <View style={styles.placeholderVolume} />
-            </View>
-            <View style={styles.placeholderQuestion} />
-            <View style={styles.placeholderPriceContainer}>
-              <View style={styles.placeholderPrice} />
-              <View style={styles.placeholderChange} />
-            </View>
-          </View>
+          )}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -95,6 +220,35 @@ const styles = StyleSheet.create({
   scrollView: {
     flex: 1,
   },
+  sortContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: Colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+    gap: 8,
+  },
+  sortChip: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: Colors.elevated,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  activeSortChip: {
+    backgroundColor: Colors.accent,
+    borderColor: Colors.accent,
+  },
+  sortText: {
+    color: Colors.textPrimary,
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  activeSortText: {
+    color: Colors.background,
+  },
   categoryContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -111,75 +265,103 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.border,
   },
+  activeCategoryChip: {
+    backgroundColor: Colors.accent,
+    borderColor: Colors.accent,
+  },
   categoryText: {
     color: Colors.textPrimary,
     fontSize: 14,
     fontWeight: '500',
   },
+  activeCategoryText: {
+    color: Colors.background,
+  },
+  categorySkeleton: {
+    width: 80,
+    height: 32,
+    backgroundColor: Colors.elevated,
+    borderRadius: 20,
+  },
   content: {
     padding: 16,
+  },
+  errorContainer: {
     alignItems: 'center',
-  },
-  placeholderText: {
-    fontSize: 24,
-    fontWeight: '600',
-    color: Colors.textPrimary,
-    marginBottom: 8,
-  },
-  placeholderSubtext: {
-    fontSize: 16,
-    color: Colors.textSecondary,
-    textAlign: 'center',
-    marginBottom: 32,
-  },
-  placeholderCard: {
-    width: '100%',
+    paddingVertical: 48,
+    paddingHorizontal: 32,
     backgroundColor: Colors.surface,
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: Colors.border,
   },
-  placeholderCardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 16,
+  errorTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: Colors.error,
+    marginTop: 16,
+    marginBottom: 8,
   },
-  placeholderCategory: {
-    width: 60,
-    height: 24,
-    backgroundColor: Colors.elevated,
-    borderRadius: 4,
+  errorSubtitle: {
+    fontSize: 16,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+    marginBottom: 24,
   },
-  placeholderVolume: {
-    width: 80,
-    height: 24,
-    backgroundColor: Colors.elevated,
-    borderRadius: 4,
+  retryButton: {
+    backgroundColor: Colors.accent,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 24,
   },
-  placeholderQuestion: {
-    width: '100%',
-    height: 40,
-    backgroundColor: Colors.elevated,
-    borderRadius: 4,
-    marginBottom: 16,
+  retryButtonText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: Colors.background,
   },
-  placeholderPriceContainer: {
+  emptyContainer: {
+    alignItems: 'center',
+    paddingVertical: 48,
+    paddingHorizontal: 32,
+    backgroundColor: Colors.surface,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  emptyTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: Colors.textPrimary,
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  emptySubtitle: {
+    fontSize: 16,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+  },
+  footer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    paddingTop: 16,
+    marginTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: Colors.borderLight,
   },
-  placeholderPrice: {
-    width: 100,
-    height: 48,
-    backgroundColor: Colors.elevated,
-    borderRadius: 8,
+  footerText: {
+    fontSize: 14,
+    color: Colors.textSecondary,
   },
-  placeholderChange: {
-    width: 60,
-    height: 24,
+  clearFilterButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
     backgroundColor: Colors.elevated,
-    borderRadius: 4,
+    borderRadius: 16,
+  },
+  clearFilterText: {
+    fontSize: 12,
+    color: Colors.textPrimary,
+    fontWeight: '500',
   },
 });
