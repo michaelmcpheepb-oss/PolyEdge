@@ -1,53 +1,74 @@
-import React from 'react';
-import { View, StyleSheet } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { View, StyleSheet, Animated } from 'react-native';
 import { Colors } from '../constants/Colors';
 
-interface SkeletonWhaleRowProps {
-  compact?: boolean;
-}
+export function SkeletonWhaleRow() {
+  const pulseAnim = useRef(new Animated.Value(0.4)).current;
 
-export function SkeletonWhaleRow({ compact = false }: SkeletonWhaleRowProps) {
+  useEffect(() => {
+    const pulse = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, {
+          toValue: 0.8,
+          duration: 900,
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulseAnim, {
+          toValue: 0.4,
+          duration: 900,
+          useNativeDriver: true,
+        }),
+      ])
+    );
+    
+    pulse.start();
+    
+    return () => {
+      pulse.stop();
+    };
+  }, []);
+
   return (
-    <View style={[styles.container, compact && styles.compactContainer]}>
-      <View style={styles.avatarContainer}>
-        <View style={styles.avatarSkeleton} />
-      </View>
-      
+    <Animated.View style={[styles.container, { opacity: pulseAnim }]}>
       <View style={styles.content}>
-        <View style={styles.header}>
-          <View style={styles.traderNameSkeleton} />
-          <View style={styles.amountSkeleton} />
+        <View style={styles.leftSection}>
+          <View style={styles.avatarSkeleton} />
+          
+          <View style={styles.tradeInfo}>
+            <View style={styles.traderNameSkeleton} />
+            <View style={styles.marketQuestionSkeleton} />
+            <View style={styles.tradeTypeSkeleton} />
+          </View>
         </View>
         
-        <View style={styles.marketQuestionSkeleton} />
-        <View style={styles.marketQuestionSkeletonShort} />
-        
-        <View style={styles.footer}>
-          <View style={styles.outcomeSkeleton} />
-          <View style={styles.timeSkeleton} />
+        <View style={styles.rightSection}>
+          <View style={styles.amountSkeleton} />
+          <View style={styles.timeAgoSkeleton} />
         </View>
       </View>
-      
-      <View style={styles.chevronSkeleton} />
-    </View>
+    </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    flexDirection: 'row',
-    alignItems: 'center',
     backgroundColor: Colors.surface,
     borderRadius: 12,
-    padding: 12,
     marginBottom: 8,
     borderWidth: 1,
     borderColor: Colors.border,
+    overflow: 'hidden',
   },
-  compactContainer: {
-    padding: 8,
+  content: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
   },
-  avatarContainer: {
+  leftSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
     marginRight: 12,
   },
   avatarSkeleton: {
@@ -55,64 +76,45 @@ const styles = StyleSheet.create({
     height: 40,
     borderRadius: 20,
     backgroundColor: Colors.elevated,
+    marginRight: 12,
   },
-  content: {
+  tradeInfo: {
     flex: 1,
   },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
   traderNameSkeleton: {
-    width: 80,
+    width: '60%',
     height: 16,
     backgroundColor: Colors.elevated,
     borderRadius: 4,
-  },
-  amountSkeleton: {
-    width: 60,
-    height: 16,
-    backgroundColor: Colors.elevated,
-    borderRadius: 4,
+    marginBottom: 4,
   },
   marketQuestionSkeleton: {
-    width: '100%',
+    width: '80%',
     height: 14,
     backgroundColor: Colors.elevated,
     borderRadius: 4,
     marginBottom: 4,
   },
-  marketQuestionSkeletonShort: {
-    width: '70%',
-    height: 14,
+  tradeTypeSkeleton: {
+    width: '40%',
+    height: 12,
     backgroundColor: Colors.elevated,
     borderRadius: 4,
-    marginBottom: 8,
   },
-  footer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+  rightSection: {
+    alignItems: 'flex-end',
   },
-  outcomeSkeleton: {
+  amountSkeleton: {
+    width: 80,
+    height: 18,
+    backgroundColor: Colors.elevated,
+    borderRadius: 4,
+    marginBottom: 4,
+  },
+  timeAgoSkeleton: {
     width: 60,
-    height: 20,
+    height: 12,
     backgroundColor: Colors.elevated,
     borderRadius: 4,
-  },
-  timeSkeleton: {
-    width: 40,
-    height: 14,
-    backgroundColor: Colors.elevated,
-    borderRadius: 4,
-  },
-  chevronSkeleton: {
-    width: 20,
-    height: 20,
-    backgroundColor: Colors.elevated,
-    borderRadius: 4,
-    marginLeft: 8,
   },
 });

@@ -1,16 +1,18 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, FlatList, RefreshControl } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/Colors';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { WhaleTradeRow } from '../../components/WhaleTradeRow';
 import { SkeletonWhaleRow } from '../../components/SkeletonWhaleRow';
-import { useWhaleTrades, useWhaleTradeThresholds } from '../../hooks/useWhaleTrades';
+import { useWhaleTrades } from '../../hooks/useWhaleTrades';
+import { useWhaleStore } from '../../stores/useWhaleStore';
 import { useState } from 'react';
-import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 
 export default function WhalesScreen() {
-  const [selectedThreshold, setSelectedThreshold] = useState<number>(10000);
-  const [timeframe, setTimeframe] = useState<'24h' | '7d' | '30d'>('24h');
-  const [isPro, setIsPro] = useState(false); // TODO: Connect to user subscription
+  const router = useRouter();
+  const { threshold, setThreshold, timeframe, setTimeframe } = useWhaleStore();
+  const [showProGate, setShowProGate] = useState(false);
   
   const {
     data: whaleTrades,
@@ -19,71 +21,155 @@ export default function WhalesScreen() {
     refetch,
     isRefetching,
   } = useWhaleTrades({
-    minAmount: selectedThreshold,
+    minAmount: threshold,
     timeframe,
-    limit: 50,
+    limit: 100,
   });
-  
-  const {
-    data: thresholds,
-    isLoading: isLoadingThresholds,
-  } = useWhaleTradeThresholds();
 
-  const handleThresholdPress = (threshold: number) => {
-    setSelectedThreshold(threshold);
+  const thresholdOptions = [1000, 5000, 10000, 25000, 50000];
+  const timeframeOptions = [
+    { value: '24h', label: '24H' },
+    { value: '7d', label: '7D' },
+    { value: '30d', label: '30D' },
+  ];
+
+  const handleThresholdPress = (newThreshold: number) => {
+    setThreshold(newThreshold);
   };
 
-  const handleTimeframePress = (tf: '24h' | '7d' | '30d') => {
-    setTimeframe(tf);
+  const handleTimeframePress = (newTimeframe: '24h' | '7d' | '30d') => {
+    setTimeframe(newTimeframe);
   };
 
-  const handleTradePress = (tradeId: string) => {
-    // TODO: Navigate to trade detail or market detail
-    console.log('Trade pressed:', tradeId);
+  const handleTradePress = (trade: any) => {
+    // Navigate to market detail
+    router.push(`/market/${trade.market_id}`);
   };
 
-  const handleTraderPress = (walletAddress: string) => {
-    // TODO: Navigate to trader profile
-    console.log('Trader pressed:', walletAddress);
-  };
+  const renderWhaleTrade = ({ item }: { item: any }) => (
+    <WhaleTradeRow 
+      trade={item} 
+      onPress={() => handleTradePress(item)}
+    />
+  );
 
-  const handleGoPro = () => {
-    // TODO: Navigate to pro subscription screen
-    console.log('Go Pro pressed');
-  };
+  const renderSkeleton = () => (
+    <>
+      <SkeletonWhaleRow />
+      <SkeletonWhaleRow />
+      <SkeletonWhaleRow />
+      <SkeletonWhaleRow />
+      <SkeletonWhaleRow />
+      <SkeletonWhaleRow />
+      <SkeletonWhaleRow />
+      <SkeletonWhaleRow />
+    </>
+  );
 
-  const formatThreshold = (amount: number) => {
-    if (amount >= 1000000) {
-      return `$${(amount / 1000000).toFixed(1)}M`;
-    }
-    if (amount >= 1000) {
-      return `$${(amount / 1000).toFixed(1)}K`;
-    }
-    return `$${amount}`;
-  };
-
-  const getTimeframeLabel = (tf: '24h' | '7d' | '30d') => {
-    switch (tf) {
-      case '24h': return '24H';
-      case '7d': return '7D';
-      case '30d': return '30D';
-    }
+  const renderProGate = () => {
+    if (!showProGate) return null;
+    
+    return (
+      <View style={styles.proGateOverlay}>
+        <View style={styles.proGateContent}>
+          <Ionicons name="lock-closed" size={48} color={Colors.accent} />
+          <Text style={styles.proGateTitle}>Real-time Whale Feed</Text>
+          <Text style={styles.proGateSubtitle}>
+            See trades as they happen with PolyEdge Pro
+          </Text>
+          <TouchableOpacity 
+            style={styles.goProButton}
+            onPress={() => router.push('/pro')}
+          >
+            <Text style={styles.goProButtonText}>Go Pro</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.closeProGateButton}
+            onPress={() => setShowProGate(false)}
+          >
+            <Text style={styles.closeProGateText}>Continue with delayed data</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
   };
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
-        <View style={styles.headerTitleContainer}>
+        <View style={styles.headerLeft}>
           <Text style={styles.title}>Whale Feed</Text>
-          <View style={styles.liveBadge}>
+          <View style={styles.liveIndicator}>
             <View style={styles.liveDot} />
             <Text style={styles.liveText}>LIVE</Text>
           </View>
         </View>
+        <TouchableOpacity style={styles.infoButton}>
+          <Ionicons name="information-circle-outline" size={24} color={Colors.textPrimary} />
+        </TouchableOpacity>
       </View>
       
-      <ScrollView 
-        style={styles.scrollView} 
+      <View style={styles.filtersContainer}>
+        <Text style={styles.filterLabel}>Threshold:</Text>
+        <ScrollView 
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.thresholdScrollView}
+          contentContainerStyle={styles.thresholdScrollContent}
+        >
+          {thresholdOptions.map((option) => (
+            <TouchableOpacity 
+              key={option}
+              style={[
+                styles.thresholdChip,
+                threshold === option && styles.activeThresholdChip
+              ]}
+              onPress={() => handleThresholdPress(option)}
+            >
+              <Text style={[
+                styles.thresholdText,
+                threshold === option && styles.activeThresholdText
+              ]}>
+                ${option >= 1000 ? `${option/1000}K` : option}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
+      
+      <View style={styles.filtersContainer}>
+        <Text style={styles.filterLabel}>Timeframe:</Text>
+        <ScrollView 
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.timeframeScrollView}
+          contentContainerStyle={styles.timeframeScrollContent}
+        >
+          {timeframeOptions.map((option) => (
+            <TouchableOpacity 
+              key={option.value}
+              style={[
+                styles.timeframeChip,
+                timeframe === option.value && styles.activeTimeframeChip
+              ]}
+              onPress={() => handleTimeframePress(option.value)}
+            >
+              <Text style={[
+                styles.timeframeText,
+                timeframe === option.value && styles.activeTimeframeText
+              ]}>
+                {option.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
+      
+      <FlatList
+        data={whaleTrades}
+        renderItem={renderWhaleTrade}
+        keyExtractor={(item) => item.id}
+        contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
@@ -93,74 +179,8 @@ export default function WhalesScreen() {
             colors={[Colors.accent]}
           />
         }
-      >
-        <View style={styles.timeframeContainer}>
-          <TouchableOpacity 
-            style={[styles.timeframeChip, timeframe === '24h' && styles.activeTimeframeChip]}
-            onPress={() => handleTimeframePress('24h')}
-          >
-            <Text style={[styles.timeframeText, timeframe === '24h' && styles.activeTimeframeText]}>
-              24H
-            </Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity 
-            style={[styles.timeframeChip, timeframe === '7d' && styles.activeTimeframeChip]}
-            onPress={() => handleTimeframePress('7d')}
-          >
-            <Text style={[styles.timeframeText, timeframe === '7d' && styles.activeTimeframeText]}>
-              7D
-            </Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity 
-            style={[styles.timeframeChip, timeframe === '30d' && styles.activeTimeframeChip]}
-            onPress={() => handleTimeframePress('30d')}
-          >
-            <Text style={[styles.timeframeText, timeframe === '30d' && styles.activeTimeframeText]}>
-              30D
-            </Text>
-          </TouchableOpacity>
-        </View>
-        
-        <View style={styles.thresholdContainer}>
-          <Text style={styles.thresholdLabel}>Min trade size:</Text>
-          <ScrollView 
-            horizontal 
-            showsHorizontalScrollIndicator={false}
-            style={styles.thresholdScrollView}
-          >
-            {isLoadingThresholds ? (
-              <>
-                <View style={styles.thresholdSkeleton} />
-                <View style={styles.thresholdSkeleton} />
-                <View style={styles.thresholdSkeleton} />
-                <View style={styles.thresholdSkeleton} />
-              </>
-            ) : (
-              thresholds?.map((threshold) => (
-                <TouchableOpacity 
-                  key={threshold}
-                  style={[
-                    styles.thresholdChip, 
-                    selectedThreshold === threshold && styles.activeThresholdChip
-                  ]}
-                  onPress={() => handleThresholdPress(threshold)}
-                >
-                  <Text style={[
-                    styles.thresholdText, 
-                    selectedThreshold === threshold && styles.activeThresholdText
-                  ]}>
-                    {formatThreshold(threshold)}
-                  </Text>
-                </TouchableOpacity>
-              ))
-            )}
-          </ScrollView>
-        </View>
-        
-        <View style={styles.content}>
-          {isError ? (
+        ListEmptyComponent={
+          isError ? (
             <View style={styles.errorContainer}>
               <Ionicons name="alert-circle-outline" size={64} color={Colors.error} />
               <Text style={styles.errorTitle}>Failed to load whale trades</Text>
@@ -172,73 +192,39 @@ export default function WhalesScreen() {
               </TouchableOpacity>
             </View>
           ) : isLoading ? (
-            <>
-              <SkeletonWhaleRow />
-              <SkeletonWhaleRow />
-              <SkeletonWhaleRow />
-              <SkeletonWhaleRow />
-              <SkeletonWhaleRow />
-            </>
-          ) : whaleTrades && whaleTrades.length > 0 ? (
-            <>
-              {whaleTrades.map((trade) => (
-                <WhaleTradeRow
-                  key={trade.id}
-                  trade={trade}
-                  onPress={() => handleTradePress(trade.id)}
-                  isPro={isPro}
-                />
-              ))}
-              
-              {!isPro && whaleTrades.length > 3 && (
-                <View style={styles.proGate}>
-                  <View style={styles.proBlur} />
-                  <View style={styles.proCta}>
-                    <Ionicons name="diamond" size={32} color={Colors.accent} />
-                    <Text style={styles.proCtaTitle}>Go Pro to see all trades</Text>
-                    <Text style={styles.proCtaSubtitle}>
-                      Unlock real-time whale alerts and full history
-                    </Text>
-                    <TouchableOpacity style={styles.proButton} onPress={handleGoPro}>
-                      <Text style={styles.proButtonText}>Go Pro</Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              )}
-            </>
+            renderSkeleton()
           ) : (
             <View style={styles.emptyContainer}>
               <Ionicons name="fish-outline" size={64} color={Colors.textSecondary} />
               <Text style={styles.emptyTitle}>No whale trades found</Text>
               <Text style={styles.emptySubtitle}>
-                {selectedThreshold > 0 
-                  ? `No trades over ${formatThreshold(selectedThreshold)} in the last ${getTimeframeLabel(timeframe).toLowerCase()}`
-                  : 'Try lowering the minimum trade size'
+                {threshold > 1000 
+                  ? `No trades above $${threshold >= 1000 ? `${threshold/1000}K` : threshold}`
+                  : 'Try lowering the threshold'
                 }
               </Text>
-              {selectedThreshold > 0 && (
-                <TouchableOpacity 
-                  style={styles.clearFilterButton}
-                  onPress={() => setSelectedThreshold(0)}
-                >
-                  <Text style={styles.clearFilterText}>Show all trades</Text>
-                </TouchableOpacity>
-              )}
             </View>
-          )}
-          
-          {whaleTrades && whaleTrades.length > 0 && (
+          )
+        }
+        ListFooterComponent={
+          whaleTrades && whaleTrades.length > 0 ? (
             <View style={styles.footer}>
               <Text style={styles.footerText}>
-                Showing {whaleTrades.length} trade{whaleTrades.length !== 1 ? 's' : ''} over {formatThreshold(selectedThreshold)}
+                Showing {whaleTrades.length} whale trade{whaleTrades.length !== 1 ? 's' : ''}
               </Text>
-              <Text style={styles.footerSubtext}>
-                Updates every 30 seconds
-              </Text>
+              <TouchableOpacity 
+                style={styles.proUpsellButton}
+                onPress={() => setShowProGate(true)}
+              >
+                <Ionicons name="flash" size={16} color={Colors.accent} />
+                <Text style={styles.proUpsellText}>See real-time trades with Pro</Text>
+              </TouchableOpacity>
             </View>
-          )}
-        </View>
-      </ScrollView>
+          ) : null
+        }
+      />
+      
+      {renderProGate()}
     </SafeAreaView>
   );
 }
@@ -249,26 +235,29 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.background,
   },
   header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 12,
     backgroundColor: Colors.surface,
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
   },
-  headerTitleContainer: {
+  headerLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 8,
   },
   title: {
     fontSize: 24,
     fontWeight: '700',
     color: Colors.textPrimary,
   },
-  liveBadge: {
+  liveIndicator: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.success,
+    backgroundColor: Colors.success + '20',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
@@ -277,24 +266,60 @@ const styles = StyleSheet.create({
   liveDot: {
     width: 8,
     height: 8,
-    backgroundColor: Colors.textPrimary,
     borderRadius: 4,
+    backgroundColor: Colors.success,
   },
   liveText: {
     fontSize: 12,
     fontWeight: '700',
-    color: Colors.textPrimary,
+    color: Colors.success,
   },
-  scrollView: {
-    flex: 1,
+  infoButton: {
+    padding: 4,
   },
-  timeframeContainer: {
-    flexDirection: 'row',
+  filtersContainer: {
     paddingHorizontal: 16,
     paddingVertical: 12,
     backgroundColor: Colors.surface,
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
+  },
+  filterLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: Colors.textPrimary,
+    marginBottom: 8,
+  },
+  thresholdScrollView: {
+    flexGrow: 0,
+  },
+  thresholdScrollContent: {
+    gap: 8,
+  },
+  thresholdChip: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: Colors.elevated,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  activeThresholdChip: {
+    backgroundColor: Colors.accent,
+    borderColor: Colors.accent,
+  },
+  thresholdText: {
+    color: Colors.textPrimary,
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  activeThresholdText: {
+    color: Colors.background,
+  },
+  timeframeScrollView: {
+    flexGrow: 0,
+  },
+  timeframeScrollContent: {
     gap: 8,
   },
   timeframeChip: {
@@ -317,53 +342,7 @@ const styles = StyleSheet.create({
   activeTimeframeText: {
     color: Colors.background,
   },
-  thresholdContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: Colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-  },
-  thresholdLabel: {
-    fontSize: 14,
-    color: Colors.textSecondary,
-    marginRight: 12,
-    fontWeight: '500',
-  },
-  thresholdScrollView: {
-    flex: 1,
-  },
-  thresholdChip: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    backgroundColor: Colors.elevated,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    marginRight: 8,
-  },
-  activeThresholdChip: {
-    backgroundColor: Colors.accent,
-    borderColor: Colors.accent,
-  },
-  thresholdText: {
-    color: Colors.textPrimary,
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  activeThresholdText: {
-    color: Colors.background,
-  },
-  thresholdSkeleton: {
-    width: 60,
-    height: 32,
-    backgroundColor: Colors.elevated,
-    borderRadius: 20,
-    marginRight: 8,
-  },
-  content: {
+  listContent: {
     padding: 16,
   },
   errorContainer: {
@@ -419,70 +398,10 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: Colors.textSecondary,
     textAlign: 'center',
-    marginBottom: 24,
-  },
-  clearFilterButton: {
-    backgroundColor: Colors.accent,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 24,
-  },
-  clearFilterText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: Colors.background,
-  },
-  proGate: {
-    marginTop: 24,
-    position: 'relative',
-    borderRadius: 16,
-    overflow: 'hidden',
-    height: 200,
-  },
-  proBlur: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: Colors.elevated,
-    opacity: 0.7,
-  },
-  proCta: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 24,
-    gap: 12,
-  },
-  proCtaTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: Colors.textPrimary,
-    textAlign: 'center',
-  },
-  proCtaSubtitle: {
-    fontSize: 14,
-    color: Colors.textSecondary,
-    textAlign: 'center',
-    marginBottom: 16,
-  },
-  proButton: {
-    backgroundColor: Colors.accent,
-    paddingHorizontal: 32,
-    paddingVertical: 12,
-    borderRadius: 24,
-  },
-  proButtonText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: Colors.background,
   },
   footer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
     paddingTop: 16,
     marginTop: 8,
@@ -492,12 +411,72 @@ const styles = StyleSheet.create({
   footerText: {
     fontSize: 14,
     color: Colors.textSecondary,
-    textAlign: 'center',
-    marginBottom: 4,
   },
-  footerSubtext: {
+  proUpsellButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: Colors.accent + '20',
+    borderRadius: 16,
+  },
+  proUpsellText: {
     fontSize: 12,
-    color: Colors.textTertiary,
+    color: Colors.accent,
+    fontWeight: '600',
+  },
+  proGateOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(13, 13, 26, 0.95)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 32,
+  },
+  proGateContent: {
+    alignItems: 'center',
+    backgroundColor: Colors.surface,
+    borderRadius: 24,
+    padding: 32,
+    width: '100%',
+    maxWidth: 400,
+  },
+  proGateTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: Colors.textPrimary,
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  proGateSubtitle: {
+    fontSize: 16,
+    color: Colors.textSecondary,
     textAlign: 'center',
+    marginBottom: 24,
+  },
+  goProButton: {
+    backgroundColor: Colors.accent,
+    paddingHorizontal: 32,
+    paddingVertical: 16,
+    borderRadius: 24,
+    width: '100%',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  goProButtonText: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: Colors.background,
+  },
+  closeProGateButton: {
+    padding: 12,
+  },
+  closeProGateText: {
+    fontSize: 14,
+    color: Colors.textSecondary,
   },
 });

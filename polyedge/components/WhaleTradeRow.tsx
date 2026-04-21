@@ -3,38 +3,32 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { WhaleTrade } from '../types';
 import { Colors } from '../constants/Colors';
 import { formatDistanceToNow } from 'date-fns';
-import { Ionicons } from '@expo/vector-icons';
 
 interface WhaleTradeRowProps {
   trade: WhaleTrade;
   onPress?: () => void;
-  isPro?: boolean;
-  showTimeAgo?: boolean;
 }
 
-export function WhaleTradeRow({ 
-  trade, 
-  onPress, 
-  isPro = false,
-  showTimeAgo = true 
-}: WhaleTradeRowProps) {
-  const getTradeColor = () => {
-    if (trade.outcome === 'YES' && trade.side === 'BUY') return Colors.success;
-    if (trade.outcome === 'NO' && trade.side === 'SELL') return Colors.success;
-    if (trade.outcome === 'YES' && trade.side === 'SELL') return Colors.error;
-    if (trade.outcome === 'NO' && trade.side === 'BUY') return Colors.error;
-    return Colors.textPrimary;
+export function WhaleTradeRow({ trade, onPress }: WhaleTradeRowProps) {
+  const isRecent = () => {
+    const tradeTime = new Date(trade.timestamp);
+    const now = new Date();
+    const diffMinutes = (now.getTime() - tradeTime.getTime()) / (1000 * 60);
+    return diffMinutes < 5;
   };
 
-  const getTradeIcon = () => {
-    if (trade.outcome === 'YES' && trade.side === 'BUY') return 'arrow-up';
-    if (trade.outcome === 'NO' && trade.side === 'SELL') return 'arrow-up';
-    if (trade.outcome === 'YES' && trade.side === 'SELL') return 'arrow-down';
-    if (trade.outcome === 'NO' && trade.side === 'BUY') return 'arrow-down';
-    return 'swap-horizontal';
+  const getTraderInitials = () => {
+    if (trade.trader_pseudonym) {
+      const parts = trade.trader_pseudonym.split(' ');
+      if (parts.length >= 2) {
+        return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+      }
+      return trade.trader_pseudonym.substring(0, 2).toUpperCase();
+    }
+    return '??';
   };
 
-  const formatCurrency = (amount: number) => {
+  const formatAmount = (amount: number) => {
     if (amount >= 1000000) {
       return `$${(amount / 1000000).toFixed(1)}M`;
     }
@@ -45,128 +39,79 @@ export function WhaleTradeRow({
   };
 
   const formatTimeAgo = (timestamp: string) => {
-    const date = new Date(timestamp);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    
-    if (diffMs < 60000) { // Less than 1 minute
-      return 'just now';
+    try {
+      return formatDistanceToNow(new Date(timestamp), { addSuffix: true });
+    } catch (error) {
+      return 'Unknown time';
     }
-    
-    if (diffMs < 3600000) { // Less than 1 hour
-      const minutes = Math.floor(diffMs / 60000);
-      return `${minutes}m ago`;
-    }
-    
-    if (diffMs < 86400000) { // Less than 1 day
-      const hours = Math.floor(diffMs / 3600000);
-      return `${hours}h ago`;
-    }
-    
-    const days = Math.floor(diffMs / 86400000);
-    return `${days}d ago`;
   };
 
-  const getTraderInitials = (pseudonym: string) => {
-    return pseudonym
-      .split(' ')
-      .map(word => word[0])
-      .join('')
-      .toUpperCase()
-      .substring(0, 2);
-  };
+  const isBuy = trade.side === 'BUY';
+  const isYes = trade.outcome === 'YES';
+  const amountColor = isBuy ? Colors.success : Colors.error;
+  const tradeType = `${isBuy ? 'BUY' : 'SELL'} ${isYes ? 'YES' : 'NO'}`;
 
-  const Content = (
-    <View style={styles.container}>
-      <View style={styles.avatarContainer}>
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>
-            {getTraderInitials(trade.trader_pseudonym)}
-          </Text>
-        </View>
-        {isPro && (
-          <View style={styles.proBadge}>
-            <Ionicons name="diamond" size={8} color={Colors.accent} />
-          </View>
-        )}
-      </View>
-      
+  return (
+    <TouchableOpacity 
+      style={styles.container}
+      onPress={onPress}
+      activeOpacity={0.7}
+    >
       <View style={styles.content}>
-        <View style={styles.header}>
-          <Text style={styles.traderName} numberOfLines={1}>
-            {trade.trader_pseudonym}
-          </Text>
-          <View style={styles.tradeInfo}>
-            <Ionicons 
-              name={getTradeIcon() as any} 
-              size={16} 
-              color={getTradeColor()} 
-              style={styles.tradeIcon}
-            />
-            <Text style={[styles.amount, { color: getTradeColor() }]}>
-              {formatCurrency(trade.amount_usd)}
-            </Text>
-          </View>
-        </View>
-        
-        <Text style={styles.marketQuestion} numberOfLines={2}>
-          {trade.market_question}
-        </Text>
-        
-        <View style={styles.footer}>
-          <View style={styles.outcomeContainer}>
-            <Text style={styles.outcomeLabel}>Outcome:</Text>
-            <Text style={[
-              styles.outcome, 
-              trade.outcome === 'YES' ? styles.outcomeYes : styles.outcomeNo
-            ]}>
-              {trade.outcome}
-            </Text>
+        <View style={styles.leftSection}>
+          <View style={styles.avatarContainer}>
+            <View style={styles.avatar}>
+              <Text style={styles.avatarText}>{getTraderInitials()}</Text>
+            </View>
+            {isRecent() && <View style={styles.recentDot} />}
           </View>
           
-          {showTimeAgo && (
-            <Text style={styles.timeAgo}>
-              {formatTimeAgo(trade.timestamp)}
+          <View style={styles.tradeInfo}>
+            <Text style={styles.traderName} numberOfLines={1}>
+              {trade.trader_pseudonym || 'Unknown Whale'}
             </Text>
-          )}
+            <Text style={styles.marketQuestion} numberOfLines={1}>
+              {trade.market_question}
+            </Text>
+            <Text style={[styles.tradeType, { color: Colors.textSecondary }]}>
+              {tradeType}
+            </Text>
+          </View>
+        </View>
+        
+        <View style={styles.rightSection}>
+          <Text style={[styles.amount, { color: amountColor }]}>
+            {formatAmount(trade.amount_usd)}
+          </Text>
+          <Text style={styles.timeAgo}>
+            {formatTimeAgo(trade.timestamp)}
+          </Text>
         </View>
       </View>
-      
-      {onPress && (
-        <TouchableOpacity style={styles.chevronButton} onPress={onPress}>
-          <Ionicons name="chevron-forward" size={20} color={Colors.textSecondary} />
-        </TouchableOpacity>
-      )}
-    </View>
+    </TouchableOpacity>
   );
-
-  if (onPress) {
-    return (
-      <TouchableOpacity 
-        style={styles.touchableContainer} 
-        onPress={onPress}
-        activeOpacity={0.7}
-      >
-        {Content}
-      </TouchableOpacity>
-    );
-  }
-
-  return Content;
 }
 
 const styles = StyleSheet.create({
-  touchableContainer: {
-    marginBottom: 8,
-  },
   container: {
-    flexDirection: 'row',
-    alignItems: 'center',
     backgroundColor: Colors.surface,
     borderRadius: 12,
-    padding: 12,
+    marginBottom: 8,
     borderWidth: 1,
     borderColor: Colors.border,
+    overflow: 'hidden',
+  },
+  content: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+  },
+  leftSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    marginRight: 12,
   },
   avatarContainer: {
     position: 'relative',
@@ -176,96 +121,54 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: Colors.elevated,
+    backgroundColor: Colors.accent,
     justifyContent: 'center',
     alignItems: 'center',
   },
   avatarText: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: '700',
-    color: Colors.textPrimary,
+    color: Colors.background,
   },
-  proBadge: {
+  recentDot: {
     position: 'absolute',
     top: -2,
     right: -2,
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    backgroundColor: Colors.background,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: Colors.accent,
-  },
-  content: {
-    flex: 1,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  traderName: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: Colors.textPrimary,
-    flex: 1,
-    marginRight: 8,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: Colors.warning,
+    borderWidth: 2,
+    borderColor: Colors.surface,
   },
   tradeInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flex: 1,
   },
-  tradeIcon: {
-    marginRight: 4,
-  },
-  amount: {
-    fontSize: 14,
-    fontWeight: '700',
+  traderName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.textPrimary,
+    marginBottom: 2,
   },
   marketQuestion: {
-    fontSize: 13,
+    fontSize: 14,
     color: Colors.textSecondary,
-    lineHeight: 18,
-    marginBottom: 8,
+    marginBottom: 4,
   },
-  footer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  outcomeContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  outcomeLabel: {
+  tradeType: {
     fontSize: 12,
-    color: Colors.textTertiary,
-    marginRight: 4,
+    fontWeight: '500',
   },
-  outcome: {
-    fontSize: 12,
-    fontWeight: '600',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
+  rightSection: {
+    alignItems: 'flex-end',
   },
-  outcomeYes: {
-    backgroundColor: 'rgba(34, 197, 94, 0.1)',
-    color: Colors.success,
-  },
-  outcomeNo: {
-    backgroundColor: 'rgba(239, 68, 68, 0.1)',
-    color: Colors.error,
+  amount: {
+    fontSize: 18,
+    fontWeight: '700',
+    marginBottom: 4,
   },
   timeAgo: {
     fontSize: 12,
     color: Colors.textTertiary,
-  },
-  chevronButton: {
-    padding: 4,
-    marginLeft: 8,
   },
 });
