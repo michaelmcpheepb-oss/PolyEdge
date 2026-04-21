@@ -184,6 +184,10 @@ export default function FeedScreen() {
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
+        removeClippedSubviews={true}
+        maxToRenderPerBatch={10}
+        windowSize={10}
+        initialNumToRender={8}
         refreshControl={
           <RefreshControl
             refreshing={isRefetching}

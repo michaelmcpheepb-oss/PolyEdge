@@ -11,7 +11,7 @@ interface MarketCardProps {
   compact?: boolean;
 }
 
-export function MarketCard({ market, compact = false }: MarketCardProps) {
+function MarketCardComponent({ market, compact = false }: MarketCardProps) {
   const router = useRouter();
   const scaleAnim = useRef(new Animated.Value(1)).current;
   
@@ -276,3 +276,5 @@ const styles = StyleSheet.create({
     color: Colors.textTertiary,
   },
 });
+
+export const MarketCard = React.memo(MarketCardComponent);
