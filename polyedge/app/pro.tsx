@@ -4,17 +4,18 @@ import { Colors } from '../constants/Colors';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { createCheckoutSession, openStripeCheckout, SUBSCRIPTION_PLANS } from '../services/stripe';
-import { useSubscription } from '../hooks/useSubscription';
+import { openStripeCheckout } from '../services/stripe-new';
+import { useSubscription, useIsPro } from '../hooks/useSubscription';
+import { useUserStore } from '../stores/useUserStore';
 
 export default function ProScreen() {
   const router = useRouter();
-  const [selectedPlan, setSelectedPlan] = useState<'pro_weekly' | 'pro_monthly'>('pro_monthly');
+  const { user } = useUserStore();
+  const [selectedPlan, setSelectedPlan] = useState<'weekly' | 'monthly'>('monthly');
   const [isProcessing, setIsProcessing] = useState(false);
   
-  // For now, use mock userId - in production, get from auth
-  const userId = 'user_mock_id';
-  const { isPro, isLoading } = useSubscription(userId);
+  const { data: subscription, isLoading } = useSubscription();
+  const isPro = useIsPro();
   
   const proFeatures = [
     {
@@ -55,45 +56,33 @@ export default function ProScreen() {
       return;
     }
     
+    if (!user) {
+      Alert.alert('Sign In Required', 'Please sign in to start your free trial.');
+      return;
+    }
+    
     setIsProcessing(true);
     
     try {
-      // Get selected plan
-      const plan = SUBSCRIPTION_PLANS.find(p => p.id === selectedPlan);
-      if (!plan) {
-        throw new Error('Invalid plan selected');
-      }
+      // Open Stripe checkout
+      await openStripeCheckout(selectedPlan, user.id);
       
-      // Create checkout session
-      const checkoutUrl = await createCheckoutSession(plan.stripePriceId, userId);
-      
-      if (!checkoutUrl) {
-        throw new Error('Failed to create checkout session');
-      }
-      
-      // Open Stripe checkout in browser
-      const result = await openStripeCheckout(checkoutUrl);
-      
-      if (result.success) {
-        Alert.alert(
-          'Success!',
-          'Your PolyEdge Pro subscription is now active. Enjoy all Pro features!',
-          [
-            {
-              text: 'OK',
-              onPress: () => router.back(),
-            },
-          ]
-        );
-      } else {
-        Alert.alert(
-          'Checkout Cancelled',
-          'Your payment was not completed. You can try again anytime.',
-          [{ text: 'OK' }]
-        );
-      }
+      // Show success message
+      Alert.alert(
+        'Checkout Started',
+        'Complete your purchase in the browser window that opened.',
+        [
+          { 
+            text: 'OK', 
+            onPress: () => {
+              // Subscription status will be refreshed automatically
+              console.log('Checkout started');
+            }
+          }
+        ]
+      );
     } catch (error) {
-      console.error('Error during checkout:', error);
+      console.error('Checkout error:', error);
       Alert.alert(
         'Error',
         'Something went wrong during checkout. Please try again.',
@@ -250,22 +239,25 @@ export default function ProScreen() {
             <TouchableOpacity 
               style={[
                 styles.pricingCard,
-                selectedPlan === 'pro_weekly' && styles.selectedPricingCard
+                selectedPlan === 'weekly' && styles.selectedPricingCard
               ]}
-              onPress={() => setSelectedPlan('pro_weekly')}
+              onPress={() => setSelectedPlan('weekly')}
             >
               <View style={styles.pricingCardHeader}>
                 <Text style={styles.pricingPlan}>Weekly</Text>
-                {selectedPlan === 'pro_weekly' && (
+                <View style={styles.bestForBadge}>
+                  <Text style={styles.bestForBadgeText}>Best for trying out</Text>
+                </View>
+                {selectedPlan === 'weekly' && (
                   <View style={styles.selectedBadge}>
                     <Ionicons name="checkmark" size={16} color={Colors.background} />
                   </View>
                 )}
               </View>
               <Text style={styles.pricingPrice}>€2.50</Text>
-              <Text style={styles.pricingPeriod}>per week</Text>
+              <Text style={styles.pricingPeriod}>/week</Text>
               <Text style={styles.pricingDescription}>
-                Try it out for a week
+                Perfect for testing the waters
               </Text>
             </TouchableOpacity>
             
@@ -273,48 +265,46 @@ export default function ProScreen() {
             <TouchableOpacity 
               style={[
                 styles.pricingCard,
-                selectedPlan === 'pro_monthly' && styles.selectedPricingCard,
+                selectedPlan === 'monthly' && styles.selectedPricingCard,
                 styles.monthlyCard,
               ]}
-              onPress={() => setSelectedPlan('pro_monthly')}
+              onPress={() => setSelectedPlan('monthly')}
             >
               <View style={styles.pricingCardHeader}>
                 <Text style={styles.pricingPlan}>Monthly</Text>
-                <View style={styles.saveBadge}>
-                  <Text style={styles.saveBadgeText}>Popular</Text>
+                <View style={styles.popularBadge}>
+                  <Text style={styles.popularBadgeText}>Most Popular</Text>
                 </View>
-                {selectedPlan === 'pro_monthly' && (
+                {selectedPlan === 'monthly' && (
                   <View style={styles.selectedBadge}>
                     <Ionicons name="checkmark" size={16} color={Colors.background} />
                   </View>
                 )}
               </View>
               <Text style={styles.pricingPrice}>€9.99</Text>
-              <Text style={styles.pricingPeriod}>per month</Text>
+              <Text style={styles.pricingPeriod}>/month</Text>
               <Text style={styles.pricingDescription}>
-                Best for regular traders
+                Best value for active traders
               </Text>
             </TouchableOpacity>
           </View>
           
-          <Text style={styles.testModeNotice}>
-            ⚡ Test Mode: Use Stripe test card 4242 4242 4242 4242
-          </Text>
+          {/* Trial notes */}
+          <View style={styles.trialNotes}>
+            <View style={styles.trialNoteRow}>
+              <Ionicons name="checkmark" size={16} color="#27AE60" />
+              <Text style={styles.trialNoteText}>7-day free trial included</Text>
+            </View>
+            <View style={styles.trialNoteRow}>
+              <Ionicons name="checkmark" size={16} color="#27AE60" />
+              <Text style={styles.trialNoteText}>Cancel anytime</Text>
+            </View>
+            <View style={styles.trialNoteRow}>
+              <Ionicons name="checkmark" size={16} color="#27AE60" />
+              <Text style={styles.trialNoteText}>No commitment</Text>
+            </View>
+          </View>
         </View>
-        
-        {/* Trial Info */}
-        <View style={styles.trialInfo}>
-          <Ionicons name="time-outline" size={20} color={Colors.accent} />
-          <Text style={styles.trialInfoText}>
-            Start your 7-day free trial. Cancel anytime.
-          </Text>
-        </View>
-        
-        {/* Test Mode Info */}
-        <View style={styles.trialInfo}>
-          <Ionicons name="card-outline" size={20} color={Colors.warning} />
-          <Text style={[styles.trialInfoText, { color: Colors.warning }]}>
-            Test Mode: Use card 4242 4242 4242 4242
           </Text>
         </View>
         
@@ -494,16 +484,40 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: Colors.textPrimary,
   },
-  saveBadge: {
+  bestForBadge: {
+    backgroundColor: Colors.elevated,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+  },
+  bestForBadgeText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: Colors.textSecondary,
+  },
+  popularBadge: {
     backgroundColor: Colors.accent,
     paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: 8,
+    borderRadius: 4,
   },
-  saveBadgeText: {
-    fontSize: 12,
-    fontWeight: '700',
+  popularBadgeText: {
+    fontSize: 11,
+    fontWeight: '600',
     color: Colors.background,
+  },
+  trialNotes: {
+    marginTop: 16,
+    gap: 8,
+  },
+  trialNoteRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  trialNoteText: {
+    fontSize: 13,
+    color: '#27AE60',
   },
   selectedBadge: {
     backgroundColor: Colors.accent,
@@ -531,35 +545,7 @@ const styles = StyleSheet.create({
   monthlyCard: {
     borderColor: Colors.accent,
   },
-  testModeNotice: {
-    fontSize: 12,
-    color: Colors.warning,
-    textAlign: 'center',
-    marginTop: 16,
-    padding: 12,
-    backgroundColor: Colors.warning + '20',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: Colors.warning + '40',
-  },
-  trialInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    padding: 16,
-    backgroundColor: Colors.accent + '10',
-    marginHorizontal: 24,
-    marginTop: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: Colors.accent + '30',
-  },
-  trialInfoText: {
-    fontSize: 14,
-    color: Colors.accent,
-    fontWeight: '500',
-  },
+
   legalText: {
     fontSize: 12,
     color: Colors.textTertiary,
