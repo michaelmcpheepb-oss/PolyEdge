@@ -450,3 +450,54 @@ export async function getTraderByAddress(walletAddress: string): Promise<Trader 
     throw error;
   }
 }
+
+export async function getLeaderboard(options?: {
+  period?: '7d' | '30d' | 'all';
+  limit?: number;
+}): Promise<Trader[]> {
+  console.log('🔍 getLeaderboard called with options:', options);
+  
+  try {
+    // For now, query from Supabase
+    // TODO: Integrate with Polymarket leaderboard API when available
+    let query = supabase
+      .from('traders')
+      .select('*');
+    
+    // Apply sorting by PnL (descending)
+    query = query.order('pnl_30d', { ascending: false });
+    
+    // Apply limit
+    if (options?.limit) {
+      query = query.limit(options.limit);
+    }
+    
+    console.log('📡 Querying Supabase for leaderboard...');
+    const { data, error } = await query;
+    
+    if (error) {
+      console.error('❌ Error fetching leaderboard:', error);
+      throw new Error(`Failed to fetch leaderboard: ${error.message}`);
+    }
+    
+    console.log(`✅ Successfully fetched ${data?.length || 0} traders for leaderboard`);
+    return data || [];
+  } catch (error) {
+    console.error('💥 Fatal error in getLeaderboard:', error);
+    throw error;
+  }
+}
+
+export async function getTraderPositions(walletAddress: string): Promise<any[]> {
+  console.log('🔍 getTraderPositions called for:', walletAddress);
+  
+  try {
+    // TODO: Integrate with Polymarket positions API
+    // For now, return empty array
+    console.log('⚠️ Positions API not yet implemented');
+    return [];
+  } catch (error) {
+    console.error('💥 Error fetching trader positions:', error);
+    throw error;
+  }
+}

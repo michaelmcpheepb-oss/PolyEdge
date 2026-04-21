@@ -26,6 +26,11 @@ export const Colors = {
   warning: '#F39C12',
   info: '#3498DB',
   
+  // Leaderboard colors
+  gold: '#FFD700',
+  silver: '#C0C0C0',
+  bronze: '#CD7F32',
+  
   // Market colors
   yes: '#27AE60',
   no: '#E74C3C',
