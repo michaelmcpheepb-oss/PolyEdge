@@ -1,16 +1,25 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Image } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Switch, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../constants/Colors';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { useAuth } from '../hooks/useAuth';
+import { useUserStore } from '../stores/useUserStore';
+import { usePreferencesStore } from '../stores/usePreferencesStore';
+import * as WebBrowser from 'expo-web-browser';
 
 export default function SettingsScreen() {
   const router = useRouter();
-  const { user, signOut, updateProfile, isAuthenticated } = useAuth();
-  const [isEditing, setIsEditing] = useState(false);
-  const [name, setName] = useState(user?.name || '');
+  const { user, signOut, showAuthSheet } = useUserStore();
+  const { 
+    categories, 
+    whaleThreshold, 
+    notificationFrequency, 
+    pushNotificationsEnabled,
+    setNotificationFrequency,
+    setPushNotificationsEnabled,
+  } = usePreferencesStore();
+  
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSignOut = async () => {
@@ -35,240 +44,255 @@ export default function SettingsScreen() {
     );
   };
 
-  const handleSaveProfile = async () => {
-    if (!name.trim()) {
-      Alert.alert('Error', 'Name cannot be empty');
-      return;
+  const handleNotificationToggle = async (value: boolean) => {
+    if (!value) {
+      // If turning off, open system settings
+      Alert.alert(
+        'Notifications Disabled',
+        'You can enable notifications in your device settings.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Open Settings', onPress: () => {
+            // This would open system notification settings
+            console.log('Open system notification settings');
+          }},
+        ]
+      );
     }
+    setPushNotificationsEnabled(value);
+  };
 
-    setIsLoading(true);
+  const handleFrequencyChange = () => {
+    Alert.alert(
+      'Alert Frequency',
+      'Choose how often you want to receive alerts',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Instant', onPress: () => setNotificationFrequency('instant') },
+        { text: 'Every 5 min', onPress: () => setNotificationFrequency('5min') },
+        { text: 'Every 15 min', onPress: () => setNotificationFrequency('15min') },
+        { text: 'Hourly', onPress: () => setNotificationFrequency('hourly') },
+      ]
+    );
+  };
+
+  const handleThresholdChange = () => {
+    Alert.alert(
+      'Default Whale Threshold',
+      'Set your default minimum whale trade size',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: '$1,000', onPress: () => usePreferencesStore.getState().setWhaleThreshold(1000) },
+        { text: '$5,000', onPress: () => usePreferencesStore.getState().setWhaleThreshold(5000) },
+        { text: '$10,000', onPress: () => usePreferencesStore.getState().setWhaleThreshold(10000) },
+        { text: '$25,000', onPress: () => usePreferencesStore.getState().setWhaleThreshold(25000) },
+        { text: '$50,000', onPress: () => usePreferencesStore.getState().setWhaleThreshold(50000) },
+      ]
+    );
+  };
+
+  const handleUpgradeToPro = () => {
+    router.push('/pro');
+  };
+
+  const handleManageSubscription = async () => {
+    // This would open Stripe customer portal
+    Alert.alert('Manage Subscription', 'This would open Stripe customer portal in production');
+  };
+
+  const handleOpenLink = async (url: string) => {
     try {
-      await updateProfile({ name: name.trim() });
-      setIsEditing(false);
-      Alert.alert('Success', 'Profile updated successfully');
+      await WebBrowser.openBrowserAsync(url);
     } catch (error) {
-      Alert.alert('Error', 'Failed to update profile. Please try again.');
-    } finally {
-      setIsLoading(false);
+      console.error('Failed to open link:', error);
     }
   };
 
-  const settingsSections = [
-    {
-      title: 'Account',
-      items: [
-        {
-          icon: 'person-outline',
-          label: 'Profile',
-          value: isAuthenticated ? 'Signed in' : 'Not signed in',
-          onPress: () => setIsEditing(true),
-          showArrow: true,
-        },
-        {
-          icon: 'notifications-outline',
-          label: 'Notifications',
-          value: 'Enabled',
-          onPress: () => Alert.alert('Notifications', 'Notification settings'),
-          showArrow: true,
-        },
-        {
-          icon: 'shield-outline',
-          label: 'Privacy & Security',
-          onPress: () => Alert.alert('Privacy', 'Privacy settings'),
-          showArrow: true,
-        },
-      ],
-    },
-    {
-      title: 'Preferences',
-      items: [
-        {
-          icon: 'filter-outline',
-          label: 'Content Preferences',
-          onPress: () => router.push('/onboarding'),
-          showArrow: true,
-        },
-        {
-          icon: 'language-outline',
-          label: 'Language',
-          value: 'English',
-          onPress: () => Alert.alert('Language', 'Language settings'),
-          showArrow: true,
-        },
-        {
-          icon: 'moon-outline',
-          label: 'Appearance',
-          value: 'Dark',
-          onPress: () => Alert.alert('Appearance', 'Appearance settings'),
-          showArrow: true,
-        },
-      ],
-    },
-    {
-      title: 'Support',
-      items: [
-        {
-          icon: 'help-circle-outline',
-          label: 'Help & Support',
-          onPress: () => Alert.alert('Help', 'Help center'),
-          showArrow: true,
-        },
-        {
-          icon: 'document-text-outline',
-          label: 'Terms of Service',
-          onPress: () => Alert.alert('Terms', 'Terms of service'),
-          showArrow: true,
-        },
-        {
-          icon: 'lock-closed-outline',
-          label: 'Privacy Policy',
-          onPress: () => Alert.alert('Privacy', 'Privacy policy'),
-          showArrow: true,
-        },
-        {
-          icon: 'information-circle-outline',
-          label: 'About PolyEdge',
-          onPress: () => Alert.alert('About', 'PolyEdge v1.0.0'),
-          showArrow: true,
-        },
-      ],
-    },
-    {
-      title: 'Subscription',
-      items: [
-        {
-          icon: 'card-outline',
-          label: 'Billing & Subscription',
-          value: 'Free Plan',
-          onPress: () => router.push('/pro'),
-          showArrow: true,
-        },
-        {
-          icon: 'receipt-outline',
-          label: 'Purchase History',
-          onPress: () => Alert.alert('History', 'Purchase history'),
-          showArrow: true,
-        },
-      ],
-    },
-  ];
+  const renderAccountSection = () => (
+    <View style={styles.section}>
+      <Text style={styles.sectionHeader}>ACCOUNT</Text>
+      <View style={styles.sectionContent}>
+        {user ? (
+          <>
+            <View style={styles.accountRow}>
+              <View style={styles.avatarContainer}>
+                <View style={styles.avatar}>
+                  <Text style={styles.avatarText}>
+                    {user.email?.charAt(0).toUpperCase() || 'U'}
+                  </Text>
+                </View>
+              </View>
+              <View style={styles.accountInfo}>
+                <Text style={styles.accountEmail}>{user.email}</Text>
+                <View style={styles.planBadge}>
+                  <Text style={styles.planBadgeText}>Free Plan</Text>
+                </View>
+              </View>
+            </View>
+            <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
+              <Text style={styles.signOutText}>Sign Out</Text>
+            </TouchableOpacity>
+          </>
+        ) : (
+          <>
+            <TouchableOpacity style={styles.signInButton} onPress={showAuthSheet}>
+              <Text style={styles.signInButtonText}>Sign In</Text>
+            </TouchableOpacity>
+            <Text style={styles.signInSubtext}>
+              Sign in to save preferences and get personalised alerts
+            </Text>
+          </>
+        )}
+      </View>
+    </View>
+  );
 
-  if (isEditing) {
-    return (
-      <SafeAreaView style={styles.container} edges={['top']}>
-        <View style={styles.header}>
-          <TouchableOpacity 
-            style={styles.backButton}
-            onPress={() => setIsEditing(false)}
-            disabled={isLoading}
-          >
-            <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
-          </TouchableOpacity>
-          <View style={styles.headerTitle}>
-            <Text style={styles.headerTitleText}>Edit Profile</Text>
+  const renderPreferencesSection = () => (
+    <View style={styles.section}>
+      <Text style={styles.sectionHeader}>PREFERENCES</Text>
+      <View style={styles.sectionContent}>
+        <TouchableOpacity style={styles.row} onPress={() => router.push('/onboarding')}>
+          <View style={styles.rowLeft}>
+            <Ionicons name="filter-outline" size={22} color={Colors.textPrimary} />
+            <Text style={styles.rowLabel}>Category Interests</Text>
           </View>
-          <TouchableOpacity 
-            style={styles.saveButton}
-            onPress={handleSaveProfile}
-            disabled={isLoading}
-          >
-            {isLoading ? (
-              <Text style={styles.saveButtonText}>Saving...</Text>
+          <View style={styles.rowRight}>
+            {categories.length > 0 ? (
+              <View style={styles.categoryChips}>
+                {categories.slice(0, 2).map((cat, index) => (
+                  <View key={index} style={styles.categoryChip}>
+                    <Text style={styles.categoryChipText}>
+                      {cat.charAt(0).toUpperCase() + cat.slice(1)}
+                    </Text>
+                  </View>
+                ))}
+                {categories.length > 2 && (
+                  <Text style={styles.moreText}>+{categories.length - 2}</Text>
+                )}
+              </View>
             ) : (
-              <Text style={styles.saveButtonText}>Save</Text>
+              <Text style={styles.rowValue}>Not set</Text>
             )}
-          </TouchableOpacity>
+            <Ionicons name="chevron-forward" size={20} color={Colors.textSecondary} />
+          </View>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.row} onPress={handleThresholdChange}>
+          <View style={styles.rowLeft}>
+            <Ionicons name="fish-outline" size={22} color={Colors.textPrimary} />
+            <Text style={styles.rowLabel}>Default Whale Threshold</Text>
+          </View>
+          <View style={styles.rowRight}>
+            <Text style={styles.rowValue}>
+              ${whaleThreshold >= 1000 ? `${whaleThreshold/1000}K` : whaleThreshold}
+            </Text>
+            <Ionicons name="chevron-forward" size={20} color={Colors.textSecondary} />
+          </View>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+
+  const renderNotificationsSection = () => (
+    <View style={styles.section}>
+      <Text style={styles.sectionHeader}>NOTIFICATIONS</Text>
+      <View style={styles.sectionContent}>
+        <View style={styles.row}>
+          <View style={styles.rowLeft}>
+            <Ionicons name="notifications-outline" size={22} color={Colors.textPrimary} />
+            <Text style={styles.rowLabel}>Push Notifications</Text>
+          </View>
+          <Switch
+            value={pushNotificationsEnabled}
+            onValueChange={handleNotificationToggle}
+            trackColor={{ false: Colors.border, true: Colors.accent }}
+            thumbColor={Colors.background}
+          />
         </View>
 
-        <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
-          <View style={styles.profileSection}>
-            <View style={styles.avatarContainer}>
-              {user?.avatar_url ? (
-                <Image source={{ uri: user.avatar_url }} style={styles.avatar} />
-              ) : (
-                <View style={styles.avatarPlaceholder}>
-                  <Text style={styles.avatarText}>
-                    {user?.name?.charAt(0) || user?.email?.charAt(0) || 'U'}
-                  </Text>
-                </View>
-              )}
-              <TouchableOpacity style={styles.editAvatarButton}>
-                <Ionicons name="camera" size={20} color={Colors.background} />
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.form}>
-              <View style={styles.formGroup}>
-                <Text style={styles.label}>Name</Text>
-                <View style={styles.inputContainer}>
-                  <Ionicons name="person" size={20} color={Colors.textSecondary} style={styles.inputIcon} />
-                  <Text style={styles.input}>{name}</Text>
-                </View>
-                <TouchableOpacity 
-                  style={styles.editFieldButton}
-                  onPress={() => {
-                    Alert.prompt(
-                      'Edit Name',
-                      'Enter your name',
-                      [
-                        { text: 'Cancel', style: 'cancel' },
-                        { 
-                          text: 'Save', 
-                          onPress: (newName) => {
-                            if (newName) setName(newName);
-                          }
-                        },
-                      ],
-                      'plain-text',
-                      name
-                    );
-                  }}
-                >
-                  <Text style={styles.editFieldButtonText}>Edit</Text>
-                </TouchableOpacity>
-              </View>
-
-              <View style={styles.formGroup}>
-                <Text style={styles.label}>Email</Text>
-                <View style={styles.inputContainer}>
-                  <Ionicons name="mail" size={20} color={Colors.textSecondary} style={styles.inputIcon} />
-                  <Text style={styles.input}>{user?.email || 'Not set'}</Text>
-                </View>
-                <Text style={styles.helpText}>Email cannot be changed</Text>
-              </View>
-
-              <View style={styles.formGroup}>
-                <Text style={styles.label}>Account Created</Text>
-                <View style={styles.inputContainer}>
-                  <Ionicons name="calendar" size={20} color={Colors.textSecondary} style={styles.inputIcon} />
-                  <Text style={styles.input}>
-                    {user?.created_at ? new Date(user.created_at).toLocaleDateString() : 'Unknown'}
-                  </Text>
-                </View>
-              </View>
-            </View>
+        <TouchableOpacity style={styles.row} onPress={handleFrequencyChange}>
+          <View style={styles.rowLeft}>
+            <Ionicons name="time-outline" size={22} color={Colors.textPrimary} />
+            <Text style={styles.rowLabel}>Alert Frequency</Text>
           </View>
+          <View style={styles.rowRight}>
+            <Text style={styles.rowValue}>
+              {notificationFrequency === 'instant' ? 'Instant' :
+               notificationFrequency === '5min' ? 'Every 5 min' :
+               notificationFrequency === '15min' ? 'Every 15 min' : 'Hourly'}
+            </Text>
+            <Ionicons name="chevron-forward" size={20} color={Colors.textSecondary} />
+          </View>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
 
-          <TouchableOpacity 
-            style={styles.dangerButton}
-            onPress={() => {
-              Alert.alert(
-                'Delete Account',
-                'This action cannot be undone. All your data will be permanently deleted.',
-                [
-                  { text: 'Cancel', style: 'cancel' },
-                  { text: 'Delete Account', style: 'destructive' },
-                ]
-              );
-            }}
-          >
-            <Ionicons name="trash-outline" size={20} color={Colors.error} />
-            <Text style={styles.dangerButtonText}>Delete Account</Text>
+  const renderSubscriptionSection = () => (
+    <View style={styles.section}>
+      <Text style={styles.sectionHeader}>SUBSCRIPTION</Text>
+      <View style={styles.sectionContent}>
+        <View style={styles.row}>
+          <View style={styles.rowLeft}>
+            <Ionicons name="card-outline" size={22} color={Colors.textPrimary} />
+            <Text style={styles.rowLabel}>Current Plan</Text>
+          </View>
+          <View style={styles.planBadge}>
+            <Text style={styles.planBadgeText}>Free Plan</Text>
+          </View>
+        </View>
+
+        <TouchableOpacity style={styles.upgradeButton} onPress={handleUpgradeToPro}>
+          <Text style={styles.upgradeButtonText}>Upgrade to Pro</Text>
+        </TouchableOpacity>
+
+        <Text style={styles.upgradeSubtext}>
+          Unlock real-time whale feed, full leaderboard & unlimited alerts
+        </Text>
+
+        {user && (
+          <TouchableOpacity style={styles.manageButton} onPress={handleManageSubscription}>
+            <Text style={styles.manageButtonText}>Manage Subscription</Text>
           </TouchableOpacity>
-        </ScrollView>
-      </SafeAreaView>
-    );
-  }
+        )}
+      </View>
+    </View>
+  );
+
+  const renderAboutSection = () => (
+    <View style={styles.section}>
+      <Text style={styles.sectionHeader}>ABOUT</Text>
+      <View style={styles.sectionContent}>
+        <View style={styles.row}>
+          <Text style={styles.rowLabel}>App Version</Text>
+          <Text style={styles.rowValue}>1.0.0</Text>
+        </View>
+
+        <TouchableOpacity style={styles.row} onPress={() => handleOpenLink('https://play.google.com/store/apps/details?id=com.polyedge.app')}>
+          <Text style={styles.rowLabel}>Rate PolyEdge</Text>
+          <Ionicons name="chevron-forward" size={20} color={Colors.textSecondary} />
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.row} onPress={() => handleOpenLink('https://polyedge.app/privacy')}>
+          <Text style={styles.rowLabel}>Privacy Policy</Text>
+          <Ionicons name="chevron-forward" size={20} color={Colors.textSecondary} />
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.row} onPress={() => handleOpenLink('https://polyedge.app/terms')}>
+          <Text style={styles.rowLabel}>Terms of Service</Text>
+          <Ionicons name="chevron-forward" size={20} color={Colors.textSecondary} />
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.row} onPress={() => handleOpenLink('https://twitter.com/polyedgeapp')}>
+          <View style={styles.rowLeft}>
+            <Ionicons name="logo-twitter" size={22} color={Colors.textPrimary} />
+            <Text style={styles.rowLabel}>Follow us on X</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color={Colors.textSecondary} />
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -286,80 +310,14 @@ export default function SettingsScreen() {
       </View>
 
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        {/* Profile Header */}
-        <View style={styles.profileHeader}>
-          <View style={styles.avatarContainer}>
-            {user?.avatar_url ? (
-              <Image source={{ uri: user.avatar_url }} style={styles.avatar} />
-            ) : (
-              <View style={styles.avatarPlaceholder}>
-                <Text style={styles.avatarText}>
-                  {user?.name?.charAt(0) || user?.email?.charAt(0) || '?'}
-                </Text>
-              </View>
-            )}
-          </View>
-          <View style={styles.profileInfo}>
-            <Text style={styles.profileName}>
-              {user?.name || user?.email || 'Not signed in'}
-            </Text>
-            <Text style={styles.profileEmail}>
-              {user?.email || 'Sign in to access all features'}
-            </Text>
-          </View>
-          {!isAuthenticated && (
-            <TouchableOpacity 
-              style={styles.signInButton}
-              onPress={() => Alert.alert('Sign In', 'Sign in flow would open here')}
-            >
-              <Text style={styles.signInButtonText}>Sign In</Text>
-            </TouchableOpacity>
-          )}
-        </View>
+        {renderAccountSection()}
+        {renderPreferencesSection()}
+        {renderNotificationsSection()}
+        {renderSubscriptionSection()}
+        {renderAboutSection()}
 
-        {/* Settings Sections */}
-        {settingsSections.map((section, sectionIndex) => (
-          <View key={sectionIndex} style={styles.section}>
-            <Text style={styles.sectionTitle}>{section.title}</Text>
-            <View style={styles.sectionContent}>
-              {section.items.map((item, itemIndex) => (
-                <TouchableOpacity
-                  key={itemIndex}
-                  style={styles.settingItem}
-                  onPress={item.onPress}
-                >
-                  <View style={styles.settingLeft}>
-                    <Ionicons name={item.icon as any} size={22} color={Colors.textPrimary} />
-                    <Text style={styles.settingLabel}>{item.label}</Text>
-                  </View>
-                  <View style={styles.settingRight}>
-                    {item.value && (
-                      <Text style={styles.settingValue}>{item.value}</Text>
-                    )}
-                    {item.showArrow && (
-                      <Ionicons name="chevron-forward" size={20} color={Colors.textSecondary} />
-                    )}
-                  </View>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-        ))}
-
-        {/* Sign Out Button */}
-        {isAuthenticated && (
-          <TouchableOpacity 
-            style={styles.signOutButton}
-            onPress={handleSignOut}
-          >
-            <Ionicons name="log-out-outline" size={22} color={Colors.error} />
-            <Text style={styles.signOutText}>Sign Out</Text>
-          </TouchableOpacity>
-        )}
-
-        {/* App Version */}
-        <View style={styles.versionContainer}>
-          <Text style={styles.versionText}>PolyEdge v1.0.0</Text>
+        <View style={styles.footer}>
+          <Text style={styles.footerText}>PolyEdge v1.0.0</Text>
           <Text style={styles.copyrightText}>© 2026 PolyEdge. All rights reserved.</Text>
         </View>
       </ScrollView>
@@ -397,99 +355,20 @@ const styles = StyleSheet.create({
   headerRight: {
     width: 40,
   },
-  saveButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-  },
-  saveButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: Colors.accent,
-  },
   scrollView: {
     flex: 1,
-  },
-  scrollContent: {
-    paddingBottom: 40,
-  },
-  profileHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 20,
-    backgroundColor: Colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-  },
-  avatarContainer: {
-    marginRight: 16,
-    position: 'relative',
-  },
-  avatar: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-  },
-  avatarPlaceholder: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: Colors.accent,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  avatarText: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: Colors.background,
-  },
-  editAvatarButton: {
-    position: 'absolute',
-    bottom: 0,
-    right: 0,
-    backgroundColor: Colors.accent,
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: Colors.background,
-  },
-  profileInfo: {
-    flex: 1,
-  },
-  profileName: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: Colors.textPrimary,
-    marginBottom: 4,
-  },
-  profileEmail: {
-    fontSize: 14,
-    color: Colors.textSecondary,
-  },
-  signInButton: {
-    backgroundColor: Colors.accent,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
-  },
-  signInButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: Colors.background,
   },
   section: {
     marginTop: 24,
     paddingHorizontal: 16,
   },
-  sectionTitle: {
-    fontSize: 14,
+  sectionHeader: {
+    fontSize: 12,
     fontWeight: '600',
-    color: Colors.textSecondary,
-    marginBottom: 12,
+    color: '#A0A0B8',
+    letterSpacing: 1.5,
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    marginBottom: 8,
   },
   sectionContent: {
     backgroundColor: Colors.surface,
@@ -498,58 +377,172 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
     overflow: 'hidden',
   },
-  settingItem: {
+  row: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    height: 52,
     paddingHorizontal: 16,
-    paddingVertical: 16,
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
   },
-  settingLeft: {
+  rowLeft: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
   },
-  settingLabel: {
+  rowLabel: {
     fontSize: 16,
     color: Colors.textPrimary,
   },
-  settingRight: {
+  rowRight: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
   },
-  settingValue: {
+  rowValue: {
     fontSize: 14,
     color: Colors.textSecondary,
   },
-  signOutButton: {
+  accountRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    marginHorizontal: 16,
-    marginTop: 32,
     padding: 16,
-    backgroundColor: Colors.surface,
-    borderRadius: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
+  avatarContainer: {
+    marginRight: 12,
+  },
+  avatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(0,212,170,0.15)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  avatarText: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: Colors.accent,
+  },
+  accountInfo: {
+    flex: 1,
+  },
+  accountEmail: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: Colors.textPrimary,
+    marginBottom: 4,
+  },
+  planBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: Colors.elevated,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+  },
+  planBadgeText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: Colors.textSecondary,
+  },
+  signOutButton: {
+    margin: 16,
+    padding: 12,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: Colors.error,
+    borderRadius: 8,
+    alignItems: 'center',
   },
   signOutText: {
     fontSize: 16,
     fontWeight: '600',
     color: Colors.error,
   },
-  versionContainer: {
+  signInButton: {
+    margin: 16,
+    backgroundColor: Colors.accent,
+    borderRadius: 12,
+    height: 52,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  signInButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.background,
+  },
+  signInSubtext: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+    marginHorizontal: 16,
+    marginBottom: 16,
+    lineHeight: 20,
+  },
+  categoryChips: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  categoryChip: {
+    backgroundColor: Colors.elevated,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+  },
+  categoryChipText: {
+    fontSize: 12,
+    color: Colors.textPrimary,
+  },
+  moreText: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+  },
+  upgradeButton: {
+    margin: 16,
+    backgroundColor: Colors.accent,
+    borderRadius: 12,
+    height: 52,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  upgradeButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.background,
+  },
+  upgradeSubtext: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+    marginHorizontal: 16,
+    marginBottom: 16,
+    lineHeight: 20,
+  },
+  manageButton: {
+    marginHorizontal: 16,
+    marginBottom: 16,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  manageButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.textPrimary,
+  },
+  footer: {
     alignItems: 'center',
     marginTop: 32,
     marginBottom: 40,
     paddingHorizontal: 16,
   },
-  versionText: {
+  footerText: {
     fontSize: 14,
     color: Colors.textSecondary,
     marginBottom: 8,
@@ -557,70 +550,5 @@ const styles = StyleSheet.create({
   copyrightText: {
     fontSize: 12,
     color: Colors.textTertiary,
-  },
-  profileSection: {
-    padding: 20,
-  },
-  form: {
-    marginTop: 24,
-  },
-  formGroup: {
-    marginBottom: 24,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: Colors.textSecondary,
-    marginBottom: 8,
-  },
-  inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.elevated,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  inputIcon: {
-    marginRight: 8,
-  },
-  input: {
-    flex: 1,
-    fontSize: 16,
-    color: Colors.textPrimary,
-  },
-  helpText: {
-    fontSize: 12,
-    color: Colors.textTertiary,
-    marginTop: 4,
-  },
-  editFieldButton: {
-    alignSelf: 'flex-start',
-    marginTop: 8,
-  },
-  editFieldButtonText: {
-    fontSize: 14,
-    color: Colors.accent,
-    fontWeight: '600',
-  },
-  dangerButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    marginTop: 32,
-    marginHorizontal: 20,
-    padding: 16,
-    backgroundColor: Colors.error + '10',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: Colors.error + '30',
-  },
-  dangerButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: Colors.error,
   },
 });

@@ -4,10 +4,11 @@ import { Colors } from '../constants/Colors';
 
 export type ErrorType = 
   | 'network' 
-  | 'server' 
-  | 'not_found' 
-  | 'unauthorized' 
-  | 'payment' 
+  | 'api' 
+  | 'empty_feed' 
+  | 'empty_whales' 
+  | 'empty_alerts' 
+  | 'empty_following' 
   | 'generic';
 
 interface ErrorStateProps {
@@ -24,43 +25,49 @@ const ERROR_CONFIGS: Record<ErrorType, {
   icon: string;
   defaultTitle: string;
   defaultMessage: string;
-  color: string;
+  actionLabel?: string;
 }> = {
   network: {
-    icon: 'wifi-outline',
-    defaultTitle: 'No Internet Connection',
-    defaultMessage: 'Please check your connection and try again.',
-    color: Colors.warning,
+    icon: 'wifi-off',
+    defaultTitle: 'No internet connection',
+    defaultMessage: 'Check your connection and try again',
+    actionLabel: 'Retry',
   },
-  server: {
-    icon: 'server-outline',
-    defaultTitle: 'Server Error',
-    defaultMessage: 'Something went wrong on our end. Please try again later.',
-    color: Colors.error,
+  api: {
+    icon: 'warning',
+    defaultTitle: 'Could not load data',
+    defaultMessage: 'Something went wrong. Please try again.',
+    actionLabel: 'Retry',
   },
-  not_found: {
-    icon: 'search-outline',
-    defaultTitle: 'Not Found',
-    defaultMessage: 'The content you\'re looking for doesn\'t exist.',
-    color: Colors.textSecondary,
+  empty_feed: {
+    icon: '🔍',
+    defaultTitle: 'No markets for these categories',
+    defaultMessage: 'Try adjusting your filters',
+    actionLabel: 'Edit Filters',
   },
-  unauthorized: {
-    icon: 'lock-closed-outline',
-    defaultTitle: 'Authentication Required',
-    defaultMessage: 'Please sign in to access this content.',
-    color: Colors.accent,
+  empty_whales: {
+    icon: '🐋',
+    defaultTitle: 'No whale trades above your threshold',
+    defaultMessage: 'Lower your threshold to see more trades',
+    actionLabel: 'Adjust Threshold',
   },
-  payment: {
-    icon: 'card-outline',
-    defaultTitle: 'Payment Failed',
-    defaultMessage: 'There was an issue processing your payment. Please try again.',
-    color: Colors.error,
+  empty_alerts: {
+    icon: '🔔',
+    defaultTitle: 'No alerts set yet',
+    defaultMessage: 'Create your first alert to get notified',
+    actionLabel: '+ Create Alert',
+  },
+  empty_following: {
+    icon: '🏅',
+    defaultTitle: 'No traders followed yet',
+    defaultMessage: 'Follow traders to see their moves here',
+    actionLabel: 'Browse Leaderboard',
   },
   generic: {
-    icon: 'alert-circle-outline',
-    defaultTitle: 'Something Went Wrong',
-    defaultMessage: 'Please try again or contact support if the issue persists.',
-    color: Colors.error,
+    icon: 'alert-circle',
+    defaultTitle: 'Something went wrong',
+    defaultMessage: 'Please try again or contact support',
+    actionLabel: 'Retry',
   },
 };
 
@@ -74,6 +81,7 @@ export function ErrorState({
   compact = false,
 }: ErrorStateProps) {
   const config = ERROR_CONFIGS[type];
+  const isEmoji = config.icon.length === 2; // Simple emoji detection
   
   if (compact) {
     return (
@@ -94,11 +102,15 @@ export function ErrorState({
   return (
     <View style={styles.container}>
       <View style={styles.iconContainer}>
-        <Ionicons 
-          name={config.icon as any} 
-          size={64} 
-          color={config.color} 
-        />
+        {isEmoji ? (
+          <Text style={styles.emojiIcon}>{config.icon}</Text>
+        ) : (
+          <Ionicons 
+            name={config.icon as any} 
+            size={48} 
+            color={Colors.textPrimary} 
+          />
+        )}
       </View>
       
       <Text style={styles.title}>
@@ -110,13 +122,14 @@ export function ErrorState({
       </Text>
       
       <View style={styles.actions}>
-        {onRetry && (
+        {(onRetry || config.actionLabel) && (
           <TouchableOpacity 
             style={styles.retryButton}
             onPress={onRetry}
           >
-            <Ionicons name="refresh" size={20} color={Colors.background} />
-            <Text style={styles.retryButtonText}>Try Again</Text>
+            <Text style={styles.retryButtonText}>
+              {config.actionLabel || 'Try Again'}
+            </Text>
           </TouchableOpacity>
         )}
         
@@ -180,7 +193,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     padding: 32,
-    backgroundColor: Colors.background,
+    backgroundColor: '#0D0D1A',
+  },
+  emojiIcon: {
+    fontSize: 48,
+    marginBottom: 16,
   },
   compactContainer: {
     flexDirection: 'row',
@@ -212,18 +229,18 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   title: {
-    fontSize: 24,
+    fontSize: 18,
     fontWeight: '700',
-    color: Colors.textPrimary,
+    color: '#FFFFFF',
     textAlign: 'center',
-    marginBottom: 12,
+    marginBottom: 8,
   },
   message: {
-    fontSize: 16,
-    color: Colors.textSecondary,
+    fontSize: 14,
+    color: '#A0A0B8',
     textAlign: 'center',
-    lineHeight: 22,
-    marginBottom: 32,
+    lineHeight: 20,
+    marginBottom: 24,
   },
   actions: {
     gap: 12,
@@ -231,18 +248,17 @@ const styles = StyleSheet.create({
     maxWidth: 300,
   },
   retryButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    backgroundColor: Colors.accent,
-    paddingVertical: 16,
+    borderWidth: 1,
+    borderColor: Colors.accent,
     borderRadius: 12,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    alignItems: 'center',
   },
   retryButtonText: {
     fontSize: 16,
-    fontWeight: '700',
-    color: Colors.background,
+    fontWeight: '600',
+    color: Colors.accent,
   },
   actionButton: {
     alignItems: 'center',
