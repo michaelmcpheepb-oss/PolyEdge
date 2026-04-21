@@ -1,145 +1,151 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, FlatList } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/Colors';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 import { useState } from 'react';
 
 export default function AlertsScreen() {
-  const [alerts, setAlerts] = useState<any[]>([]); // TODO: Replace with real alerts
-  const [isPro, setIsPro] = useState(false); // TODO: Connect to user subscription
+  const router = useRouter();
+  const [alerts, setAlerts] = useState<any[]>([
+    // Example alerts
+    {
+      id: '1',
+      marketId: '540816',
+      marketQuestion: 'Russia-Ukraine Ceasefire before GTA VI?',
+      alertType: 'price_above',
+      threshold: 60,
+      active: true,
+      created_at: '2026-04-20T10:30:00Z',
+    },
+    {
+      id: '2',
+      marketId: '540817',
+      marketQuestion: 'New Rihanna Album before GTA VI?',
+      alertType: 'price_below',
+      threshold: 40,
+      active: false,
+      created_at: '2026-04-19T14:20:00Z',
+    },
+  ]);
 
   const handleCreateAlert = () => {
-    // TODO: Navigate to create alert screen
-    console.log('Create alert pressed');
+    router.push('/alerts/create');
   };
 
-  const handleToggleAlert = (alertId: string) => {
-    // TODO: Toggle alert active state
-    console.log('Toggle alert:', alertId);
+  const toggleAlert = (id: string) => {
+    setAlerts(alerts.map(alert => 
+      alert.id === id ? { ...alert, active: !alert.active } : alert
+    ));
   };
 
-  const handleDeleteAlert = (alertId: string) => {
-    // TODO: Delete alert
-    console.log('Delete alert:', alertId);
+  const deleteAlert = (id: string) => {
+    setAlerts(alerts.filter(alert => alert.id !== id));
   };
 
-  const handleGoPro = () => {
-    // TODO: Navigate to pro subscription screen
-    console.log('Go Pro pressed');
+  const getAlertTypeLabel = (type: string) => {
+    switch (type) {
+      case 'price_above': return 'Price above';
+      case 'price_below': return 'Price below';
+      case 'move_24h': return '24h move';
+      case 'whale_trade': return 'Whale trade';
+      default: return 'Alert';
+    }
   };
 
-  const alertTypes = [
-    { id: 'price_above', label: 'Price Above', icon: 'trending-up' },
-    { id: 'price_below', label: 'Price Below', icon: 'trending-down' },
-    { id: 'price_move', label: 'Price Move %', icon: 'swap-vertical' },
-    { id: 'whale_trade', label: 'Whale Trade', icon: 'fish' },
-  ];
+  const renderAlertItem = ({ item }: { item: any }) => (
+    <View style={styles.alertCard}>
+      <View style={styles.alertHeader}>
+        <Text style={styles.marketQuestion} numberOfLines={1}>
+          {item.marketQuestion}
+        </Text>
+        <TouchableOpacity 
+          style={styles.deleteButton}
+          onPress={() => deleteAlert(item.id)}
+        >
+          <Ionicons name="trash-outline" size={20} color={Colors.error} />
+        </TouchableOpacity>
+      </View>
+      
+      <View style={styles.alertDetails}>
+        <View style={styles.alertTypeBadge}>
+          <Text style={styles.alertTypeText}>
+            {getAlertTypeLabel(item.alertType)}
+          </Text>
+        </View>
+        <Text style={styles.threshold}>
+          {item.alertType === 'whale_trade' ? '$' : ''}{item.threshold}{item.alertType === 'whale_trade' ? '' : '%'}
+        </Text>
+      </View>
+      
+      <View style={styles.alertFooter}>
+        <TouchableOpacity 
+          style={[styles.toggleButton, item.active && styles.toggleButtonActive]}
+          onPress={() => toggleAlert(item.id)}
+        >
+          <View style={[styles.toggleCircle, item.active && styles.toggleCircleActive]} />
+          <Text style={[styles.toggleText, item.active && styles.toggleTextActive]}>
+            {item.active ? 'Active' : 'Inactive'}
+          </Text>
+        </TouchableOpacity>
+        
+        <Text style={styles.createdDate}>
+          Created {new Date(item.created_at).toLocaleDateString()}
+        </Text>
+      </View>
+    </View>
+  );
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
-        <Text style={styles.title}>My Alerts</Text>
-        <TouchableOpacity style={styles.createButton} onPress={handleCreateAlert}>
-          <Ionicons name="add-circle" size={24} color={Colors.accent} />
+        <Text style={styles.title}>Alerts</Text>
+        <TouchableOpacity 
+          style={styles.createButton}
+          onPress={handleCreateAlert}
+        >
+          <Ionicons name="add" size={24} color={Colors.background} />
         </TouchableOpacity>
       </View>
       
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        {alerts.length === 0 ? (
-          <View style={styles.emptyState}>
-            <Ionicons name="notifications-off" size={64} color={Colors.textSecondary} />
-            <Text style={styles.emptyStateTitle}>No alerts yet</Text>
-            <Text style={styles.emptyStateSubtitle}>
-              Create alerts to get notified when markets move or whales trade
-            </Text>
-            <TouchableOpacity style={styles.createAlertButton} onPress={handleCreateAlert}>
-              <Text style={styles.createAlertButtonText}>Create Your First Alert</Text>
-            </TouchableOpacity>
-          </View>
-        ) : (
-          <View style={styles.alertsList}>
-            {/* TODO: Render real alerts */}
-            <Text style={styles.comingSoon}>Alerts list coming soon</Text>
-          </View>
-        )}
-        
-        <View style={styles.alertTypesSection}>
-          <Text style={styles.sectionTitle}>Alert Types</Text>
-          <Text style={styles.sectionSubtitle}>
-            Get notified when specific conditions are met
+      {alerts.length === 0 ? (
+        <View style={styles.emptyState}>
+          <Ionicons name="notifications-off-outline" size={96} color={Colors.textSecondary} />
+          <Text style={styles.emptyTitle}>No Alerts Yet</Text>
+          <Text style={styles.emptySubtitle}>
+            Create your first alert to get notified about market movements
           </Text>
-          
-          <View style={styles.alertTypesGrid}>
-            {alertTypes.map((type) => (
-              <TouchableOpacity 
-                key={type.id}
-                style={styles.alertTypeCard}
-                onPress={() => console.log('Select alert type:', type.id)}
-              >
-                <View style={styles.alertTypeIcon}>
-                  <Ionicons name={type.icon as any} size={24} color={Colors.accent} />
-                </View>
-                <Text style={styles.alertTypeLabel}>{type.label}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+          <TouchableOpacity 
+            style={styles.emptyCreateButton}
+            onPress={handleCreateAlert}
+          >
+            <Ionicons name="add" size={20} color={Colors.background} />
+            <Text style={styles.emptyCreateButtonText}>Create Alert</Text>
+          </TouchableOpacity>
         </View>
-        
-        {!isPro && (
-          <View style={styles.proSection}>
-            <View style={styles.proCard}>
-              <Ionicons name="diamond" size={32} color={Colors.accent} />
-              <Text style={styles.proTitle}>Unlock Pro Alerts</Text>
-              <Text style={styles.proDescription}>
-                Get real-time push notifications, custom alert sounds, and priority delivery
-              </Text>
-              <TouchableOpacity style={styles.proButton} onPress={handleGoPro}>
-                <Text style={styles.proButtonText}>Go Pro</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
-        
-        <View style={styles.howItWorksSection}>
-          <Text style={styles.sectionTitle}>How Alerts Work</Text>
-          
-          <View style={styles.featureRow}>
-            <View style={styles.featureIcon}>
-              <Ionicons name="notifications" size={24} color={Colors.accent} />
-            </View>
-            <View style={styles.featureText}>
-              <Text style={styles.featureTitle}>Real-time Notifications</Text>
-              <Text style={styles.featureDescription}>
-                Get instant push notifications when your alert conditions are met
-              </Text>
-            </View>
-          </View>
-          
-          <View style={styles.featureRow}>
-            <View style={styles.featureIcon}>
-              <Ionicons name="settings" size={24} color={Colors.accent} />
-            </View>
-            <View style={styles.featureText}>
-              <Text style={styles.featureTitle}>Custom Conditions</Text>
-              <Text style={styles.featureDescription}>
-                Set price thresholds, volume changes, or whale trade sizes
-              </Text>
-            </View>
-          </View>
-          
-          <View style={styles.featureRow}>
-            <View style={styles.featureIcon}>
-              <Ionicons name="time" size={24} color={Colors.accent} />
-            </View>
-            <View style={styles.featureText}>
-              <Text style={styles.featureTitle}>24/7 Monitoring</Text>
-              <Text style={styles.featureDescription}>
-                We monitor markets around the clock, even when you're offline
-              </Text>
-            </View>
-          </View>
-        </View>
-      </ScrollView>
+      ) : (
+        <FlatList
+          data={alerts}
+          renderItem={renderAlertItem}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
+        />
+      )}
+      
+      {/* Pro Upsell */}
+      <View style={styles.proUpsell}>
+        <Ionicons name="star" size={20} color={Colors.accent} />
+        <Text style={styles.proUpsellText}>
+          Unlimited alerts with PolyEdge Pro
+        </Text>
+        <TouchableOpacity 
+          style={styles.proUpsellButton}
+          onPress={() => router.push('/pro')}
+        >
+          <Text style={styles.proUpsellButtonText}>Upgrade</Text>
+        </TouchableOpacity>
+      </View>
     </SafeAreaView>
   );
 }
@@ -165,173 +171,161 @@ const styles = StyleSheet.create({
     color: Colors.textPrimary,
   },
   createButton: {
-    padding: 4,
-  },
-  scrollView: {
-    flex: 1,
+    backgroundColor: Colors.accent,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   emptyState: {
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 48,
-    paddingHorizontal: 32,
-    backgroundColor: Colors.surface,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    margin: 16,
+    padding: 32,
   },
-  emptyStateTitle: {
+  emptyTitle: {
     fontSize: 24,
     fontWeight: '700',
     color: Colors.textPrimary,
     marginTop: 16,
     marginBottom: 8,
   },
-  emptyStateSubtitle: {
+  emptySubtitle: {
     fontSize: 16,
     color: Colors.textSecondary,
     textAlign: 'center',
     marginBottom: 24,
   },
-  createAlertButton: {
+  emptyCreateButton: {
     backgroundColor: Colors.accent,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 24,
   },
-  createAlertButtonText: {
+  emptyCreateButtonText: {
     fontSize: 16,
     fontWeight: '700',
     color: Colors.background,
   },
-  alertsList: {
+  listContent: {
     padding: 16,
   },
-  comingSoon: {
-    fontSize: 16,
-    color: Colors.textSecondary,
-    textAlign: 'center',
-    padding: 32,
-  },
-  alertTypesSection: {
-    padding: 16,
+  alertCard: {
     backgroundColor: Colors.surface,
-    borderRadius: 16,
-    margin: 16,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: Colors.textPrimary,
-    marginBottom: 4,
-  },
-  sectionSubtitle: {
-    fontSize: 14,
-    color: Colors.textSecondary,
-    marginBottom: 20,
-  },
-  alertTypesGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-  },
-  alertTypeCard: {
-    flex: 1,
-    minWidth: '45%',
-    backgroundColor: Colors.elevated,
     borderRadius: 12,
     padding: 16,
-    alignItems: 'center',
+    marginBottom: 12,
     borderWidth: 1,
     borderColor: Colors.border,
   },
-  alertTypeIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: Colors.background,
-    justifyContent: 'center',
-    alignItems: 'center',
+  alertHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
     marginBottom: 12,
   },
-  alertTypeLabel: {
-    fontSize: 14,
+  marketQuestion: {
+    flex: 1,
+    fontSize: 16,
     fontWeight: '600',
     color: Colors.textPrimary,
-    textAlign: 'center',
+    marginRight: 8,
   },
-  proSection: {
-    padding: 16,
+  deleteButton: {
+    padding: 4,
   },
-  proCard: {
-    backgroundColor: Colors.surface,
-    borderRadius: 16,
-    padding: 24,
+  alertDetails: {
+    flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: Colors.border,
+    marginBottom: 16,
+    gap: 8,
   },
-  proTitle: {
+  alertTypeBadge: {
+    backgroundColor: Colors.accent + '20',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+  },
+  alertTypeText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: Colors.accent,
+  },
+  threshold: {
     fontSize: 20,
     fontWeight: '700',
     color: Colors.textPrimary,
-    marginTop: 16,
-    marginBottom: 8,
   },
-  proDescription: {
-    fontSize: 14,
-    color: Colors.textSecondary,
-    textAlign: 'center',
-    marginBottom: 20,
+  alertFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: Colors.borderLight,
   },
-  proButton: {
-    backgroundColor: Colors.accent,
-    paddingHorizontal: 32,
-    paddingVertical: 12,
-    borderRadius: 24,
-  },
-  proButtonText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: Colors.background,
-  },
-  howItWorksSection: {
-    padding: 16,
-    backgroundColor: Colors.surface,
-    borderRadius: 16,
-    margin: 16,
-    marginTop: 0,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  featureRow: {
+  toggleButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 20,
-  },
-  featureIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
     backgroundColor: Colors.elevated,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    gap: 6,
   },
-  featureText: {
-    flex: 1,
+  toggleButtonActive: {
+    backgroundColor: Colors.success + '20',
   },
-  featureTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: Colors.textPrimary,
-    marginBottom: 4,
+  toggleCircle: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: Colors.textTertiary,
   },
-  featureDescription: {
-    fontSize: 14,
+  toggleCircleActive: {
+    backgroundColor: Colors.success,
+  },
+  toggleText: {
+    fontSize: 12,
+    fontWeight: '500',
     color: Colors.textSecondary,
-    lineHeight: 20,
+  },
+  toggleTextActive: {
+    color: Colors.success,
+  },
+  createdDate: {
+    fontSize: 12,
+    color: Colors.textTertiary,
+  },
+  proUpsell: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 16,
+    backgroundColor: Colors.accent + '10',
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
+  },
+  proUpsellText: {
+    flex: 1,
+    fontSize: 14,
+    color: Colors.accent,
+    fontWeight: '500',
+    marginLeft: 8,
+  },
+  proUpsellButton: {
+    backgroundColor: Colors.accent,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 16,
+  },
+  proUpsellButtonText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: Colors.background,
   },
 });
