@@ -102,6 +102,13 @@ export default function RootLayout() {
               headerShown: false,
             }} 
           />
+          <Stack.Screen 
+            name="login" 
+            options={{ 
+              presentation: 'modal',
+              headerShown: false,
+            }} 
+          />
         </Stack>
         </StripeProviderWrapper>
       </QueryClientProvider>

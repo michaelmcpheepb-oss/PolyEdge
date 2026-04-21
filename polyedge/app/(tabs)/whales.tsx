@@ -4,6 +4,7 @@ import { Colors } from '../../constants/Colors';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { WhaleTradeRow } from '../../components/WhaleTradeRow';
 import { SkeletonWhaleRow } from '../../components/SkeletonWhaleRow';
+import { ErrorState, EmptyState } from '../../components/ErrorState';
 import { useWhaleTrades } from '../../hooks/useWhaleTrades';
 import { useWhaleStore } from '../../stores/useWhaleStore';
 import { useState } from 'react';
@@ -181,29 +182,25 @@ export default function WhalesScreen() {
         }
         ListEmptyComponent={
           isError ? (
-            <View style={styles.errorContainer}>
-              <Ionicons name="alert-circle-outline" size={64} color={Colors.error} />
-              <Text style={styles.errorTitle}>Failed to load whale trades</Text>
-              <Text style={styles.errorSubtitle}>
-                Please check your connection and try again
-              </Text>
-              <TouchableOpacity style={styles.retryButton} onPress={() => refetch()}>
-                <Text style={styles.retryButtonText}>Retry</Text>
-              </TouchableOpacity>
-            </View>
+            <ErrorState 
+              type="network"
+              title="Failed to load whale trades"
+              message="Please check your connection and try again"
+              onRetry={() => refetch()}
+            />
           ) : isLoading ? (
             renderSkeleton()
           ) : (
-            <View style={styles.emptyContainer}>
-              <Ionicons name="fish-outline" size={64} color={Colors.textSecondary} />
-              <Text style={styles.emptyTitle}>No whale trades found</Text>
-              <Text style={styles.emptySubtitle}>
-                {threshold > 1000 
-                  ? `No trades above $${threshold >= 1000 ? `${threshold/1000}K` : threshold}`
-                  : 'Try lowering the threshold'
-                }
-              </Text>
-            </View>
+            <EmptyState 
+              icon="fish-outline"
+              title="No whale trades found"
+              message={threshold > 1000 
+                ? `No trades above $${threshold >= 1000 ? `${threshold/1000}K` : threshold}`
+                : 'Try lowering the threshold'
+              }
+              actionLabel={threshold > 1000 ? "Lower threshold" : undefined}
+              onAction={threshold > 1000 ? () => setThreshold(1000) : undefined}
+            />
           )
         }
         ListFooterComponent={
@@ -345,60 +342,7 @@ const styles = StyleSheet.create({
   listContent: {
     padding: 16,
   },
-  errorContainer: {
-    alignItems: 'center',
-    paddingVertical: 48,
-    paddingHorizontal: 32,
-    backgroundColor: Colors.surface,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  errorTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: Colors.error,
-    marginTop: 16,
-    marginBottom: 8,
-  },
-  errorSubtitle: {
-    fontSize: 16,
-    color: Colors.textSecondary,
-    textAlign: 'center',
-    marginBottom: 24,
-  },
-  retryButton: {
-    backgroundColor: Colors.accent,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 24,
-  },
-  retryButtonText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: Colors.background,
-  },
-  emptyContainer: {
-    alignItems: 'center',
-    paddingVertical: 48,
-    paddingHorizontal: 32,
-    backgroundColor: Colors.surface,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  emptyTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: Colors.textPrimary,
-    marginTop: 16,
-    marginBottom: 8,
-  },
-  emptySubtitle: {
-    fontSize: 16,
-    color: Colors.textSecondary,
-    textAlign: 'center',
-  },
+
   footer: {
     flexDirection: 'row',
     justifyContent: 'space-between',

@@ -169,13 +169,15 @@ export async function getMarkets(options?: {
       
       if (fallbackError) {
         console.error('❌ Fallback also failed:', fallbackError);
-        throw new Error('All data sources failed');
+        // Return empty array instead of throwing - app will show empty state
+        return [];
       }
       
       return data || [];
     } catch (fallbackError) {
       console.error('💥 Complete failure:', fallbackError);
-      throw new Error('Failed to fetch markets from any source');
+      // Return empty array - app will show empty/error state
+      return [];
     }
   }
 }

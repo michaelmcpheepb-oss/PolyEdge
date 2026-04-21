@@ -4,12 +4,20 @@ import { Colors } from '../../constants/Colors';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MarketCard } from '../../components/MarketCard';
 import { SkeletonCard } from '../../components/SkeletonCard';
+import { ErrorState, EmptyState } from '../../components/ErrorState';
 import { useMarkets, useMarketCategories } from '../../hooks/useMarkets';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'expo-router';
+import { useUserPreferences } from '../../services/userPreferences';
 
 export default function FeedScreen() {
+  const router = useRouter();
   const [selectedCategory, setSelectedCategory] = useState<string | undefined>();
   const [sortBy, setSortBy] = useState<'volume' | 'newest' | 'ending_soon'>('volume');
+  
+  // For now, use mock user ID - in production, get from auth
+  const userId = 'user_mock_id';
+  const { preferences, isLoading: isLoadingPreferences } = useUserPreferences(userId);
   
   const {
     data: markets,
@@ -22,6 +30,33 @@ export default function FeedScreen() {
     sortBy,
     limit: 50,
   });
+  
+  // Filter markets by user's category preferences
+  const filteredMarkets = markets?.filter(market => {
+    if (!preferences.categories || preferences.categories.length === 0) {
+      return true;
+    }
+    
+    // Simple category matching
+    const marketCategory = market.category?.toLowerCase() || '';
+    const marketQuestion = market.question?.toLowerCase() || '';
+    
+    return preferences.categories.some(categoryId => {
+      const categoryMap: Record<string, string[]> = {
+        sports: ['sports', 'football', 'basketball', 'baseball', 'soccer'],
+        politics: ['politics', 'election', 'government'],
+        crypto: ['crypto', 'bitcoin', 'ethereum', 'blockchain'],
+        science: ['science', 'technology', 'space', 'climate'],
+        world_events: ['world', 'international', 'conflict'],
+        economics: ['economics', 'finance', 'stocks', 'economy'],
+      };
+      
+      const mappedCategories = categoryMap[categoryId] || [categoryId];
+      return mappedCategories.some(cat => 
+        marketCategory.includes(cat) || marketQuestion.includes(cat)
+      );
+    });
+  }) || [];
   
   const {
     data: categories,
@@ -61,9 +96,22 @@ export default function FeedScreen() {
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
         <Text style={styles.title}>PolyEdge</Text>
-        <TouchableOpacity style={styles.settingsButton}>
-          <Ionicons name="settings-outline" size={24} color={Colors.textPrimary} />
-        </TouchableOpacity>
+        <View style={styles.headerButtons}>
+          {preferences.categories && preferences.categories.length > 0 && (
+            <View style={styles.filterBadge}>
+              <Ionicons name="funnel" size={12} color={Colors.accent} />
+            </View>
+          )}
+          <TouchableOpacity 
+            style={styles.filterButton}
+            onPress={() => router.push('/onboarding')}
+          >
+            <Ionicons name="funnel-outline" size={24} color={Colors.textPrimary} />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.settingsButton}>
+            <Ionicons name="settings-outline" size={24} color={Colors.textPrimary} />
+          </TouchableOpacity>
+        </View>
       </View>
       
       <View style={styles.sortContainer}>
@@ -130,7 +178,7 @@ export default function FeedScreen() {
       </ScrollView>
       
       <FlatList
-        data={markets}
+        data={filteredMarkets}
         renderItem={renderMarketItem}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContent}
@@ -145,29 +193,25 @@ export default function FeedScreen() {
         }
         ListEmptyComponent={
           isError ? (
-            <View style={styles.errorContainer}>
-              <Ionicons name="alert-circle-outline" size={64} color={Colors.error} />
-              <Text style={styles.errorTitle}>Failed to load markets</Text>
-              <Text style={styles.errorSubtitle}>
-                Please check your connection and try again
-              </Text>
-              <TouchableOpacity style={styles.retryButton} onPress={() => refetch()}>
-                <Text style={styles.retryButtonText}>Retry</Text>
-              </TouchableOpacity>
-            </View>
+            <ErrorState 
+              type="network"
+              title="Failed to load markets"
+              message="Please check your connection and try again"
+              onRetry={() => refetch()}
+            />
           ) : isLoading ? (
             renderSkeleton()
           ) : (
-            <View style={styles.emptyContainer}>
-              <Ionicons name="flame-outline" size={64} color={Colors.textSecondary} />
-              <Text style={styles.emptyTitle}>No markets found</Text>
-              <Text style={styles.emptySubtitle}>
-                {selectedCategory 
-                  ? `No ${selectedCategory} markets available`
-                  : 'Try changing your filters'
-                }
-              </Text>
-            </View>
+            <EmptyState 
+              icon="flame-outline"
+              title="No markets found"
+              message={selectedCategory 
+                ? `No ${selectedCategory} markets available`
+                : 'Try changing your filters'
+              }
+              actionLabel={selectedCategory ? "Clear filter" : undefined}
+              onAction={selectedCategory ? () => setSelectedCategory(undefined) : undefined}
+            />
           )
         }
         ListFooterComponent={
@@ -211,6 +255,29 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: '700',
     color: Colors.accent,
+  },
+  headerButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    position: 'relative',
+  },
+  filterBadge: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    backgroundColor: Colors.background,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: Colors.accent,
+    zIndex: 1,
+  },
+  filterButton: {
+    padding: 4,
   },
   settingsButton: {
     padding: 4,
@@ -277,60 +344,7 @@ const styles = StyleSheet.create({
   listContent: {
     padding: 16,
   },
-  errorContainer: {
-    alignItems: 'center',
-    paddingVertical: 48,
-    paddingHorizontal: 32,
-    backgroundColor: Colors.surface,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  errorTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: Colors.error,
-    marginTop: 16,
-    marginBottom: 8,
-  },
-  errorSubtitle: {
-    fontSize: 16,
-    color: Colors.textSecondary,
-    textAlign: 'center',
-    marginBottom: 24,
-  },
-  retryButton: {
-    backgroundColor: Colors.accent,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 24,
-  },
-  retryButtonText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: Colors.background,
-  },
-  emptyContainer: {
-    alignItems: 'center',
-    paddingVertical: 48,
-    paddingHorizontal: 32,
-    backgroundColor: Colors.surface,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  emptyTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: Colors.textPrimary,
-    marginTop: 16,
-    marginBottom: 8,
-  },
-  emptySubtitle: {
-    fontSize: 16,
-    color: Colors.textSecondary,
-    textAlign: 'center',
-  },
+
   footer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
