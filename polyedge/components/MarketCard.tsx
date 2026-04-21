@@ -1,16 +1,20 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import React, { useRef } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native';
 import { Market } from '../types';
 import { Colors } from '../constants/Colors';
 import { formatDistanceToNow } from 'date-fns';
+import * as Haptics from 'expo-haptics';
+import { useRouter } from 'expo-router';
 
 interface MarketCardProps {
   market: Market;
-  onPress?: () => void;
   compact?: boolean;
 }
 
-export function MarketCard({ market, onPress, compact = false }: MarketCardProps) {
+export function MarketCard({ market, compact = false }: MarketCardProps) {
+  const router = useRouter();
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+  
   const getPriceColor = (price: number) => {
     if (price > 0.6) return Colors.success;
     if (price > 0.4) return Colors.warning;
@@ -56,81 +60,117 @@ export function MarketCard({ market, onPress, compact = false }: MarketCardProps
     return `${diffMinutes} minute${diffMinutes !== 1 ? 's' : ''}`;
   };
 
-  const Content = (
-    <View style={[styles.card, compact && styles.compactCard]}>
-      <View style={styles.header}>
-        <View style={styles.categoryContainer}>
-          <Text style={styles.category}>{market.category || 'General'}</Text>
-        </View>
-        <View style={styles.volumeContainer}>
-          <Text style={styles.volume}>{formatCurrency(market.volume_24h)}</Text>
-          <Text style={styles.volumeLabel}>24h vol</Text>
-        </View>
-      </View>
-      
-      <Text style={styles.question} numberOfLines={compact ? 2 : 3}>
-        {market.question}
-      </Text>
-      
-      <View style={styles.priceContainer}>
-        <View style={styles.priceColumn}>
-          <Text style={styles.priceLabel}>YES</Text>
-          <Text style={[styles.price, { color: getPriceColor(market.yes_price) }]}>
-            {(market.yes_price * 100).toFixed(1)}¢
-          </Text>
+  const calculate24hChange = () => {
+    // For now, simulate a random change
+    // In production, this would come from historical data
+    const change = (Math.random() * 20 - 10); // -10% to +10%
+    return {
+      value: change,
+      formatted: `${change > 0 ? '+' : ''}${change.toFixed(1)}%`,
+      color: change > 0 ? Colors.success : Colors.error,
+    };
+  };
+
+  const handlePress = () => {
+    // Haptic feedback
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    
+    // Scale animation
+    Animated.sequence([
+      Animated.timing(scaleAnim, {
+        toValue: 0.97,
+        duration: 100,
+        useNativeDriver: true,
+      }),
+      Animated.timing(scaleAnim, {
+        toValue: 1,
+        duration: 100,
+        useNativeDriver: true,
+      }),
+    ]).start();
+    
+    // Navigate to market detail
+    setTimeout(() => {
+      router.push(`/market/${market.id}`);
+    }, 150);
+  };
+
+  const change24h = calculate24hChange();
+
+  return (
+    <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+      <TouchableOpacity 
+        onPress={handlePress}
+        activeOpacity={0.7}
+        style={[styles.card, compact && styles.compactCard]}
+      >
+        <View style={styles.header}>
+          <View style={styles.categoryContainer}>
+            <Text style={styles.category}>{market.category || 'General'}</Text>
+          </View>
+          <View style={styles.volumeContainer}>
+            <Text style={styles.volume}>{formatCurrency(market.volume_24h)}</Text>
+            <Text style={styles.volumeLabel}>24h vol</Text>
+          </View>
         </View>
         
-        <View style={styles.priceColumn}>
-          <Text style={styles.priceLabel}>NO</Text>
-          <Text style={[styles.price, { color: getPriceColor(market.no_price) }]}>
-            {(market.no_price * 100).toFixed(1)}¢
-          </Text>
-        </View>
-        
-        <View style={styles.timeColumn}>
-          <Text style={styles.timeLabel}>Ends in</Text>
-          <Text style={styles.time}>{formatTimeRemaining(market.end_date)}</Text>
-        </View>
-      </View>
-      
-      {!compact && market.description && (
-        <Text style={styles.description} numberOfLines={2}>
-          {market.description}
+        <Text style={styles.question} numberOfLines={2}>
+          {market.question}
         </Text>
-      )}
-      
-      {!compact && (
-        <View style={styles.footer}>
-          <Text style={styles.totalVolume}>
-            Total volume: {formatCurrency(market.total_volume)}
-          </Text>
-          <Text style={styles.updated}>
-            Updated {formatDistanceToNow(new Date(market.updated_at), { addSuffix: true })}
-          </Text>
+        
+        <View style={styles.priceContainer}>
+          <View style={styles.priceColumn}>
+            <Text style={styles.priceLabel}>YES</Text>
+            <Text style={[styles.price, { color: Colors.accent }]}>
+              {(market.yes_price * 100).toFixed(1)}%
+            </Text>
+            <Text style={[styles.change24h, { color: change24h.color }]}>
+              {change24h.formatted}
+            </Text>
+          </View>
+          
+          <View style={styles.divider} />
+          
+          <View style={styles.priceColumn}>
+            <Text style={styles.priceLabel}>NO</Text>
+            <Text style={[styles.price, { color: getPriceColor(market.no_price) }]}>
+              {(market.no_price * 100).toFixed(1)}%
+            </Text>
+            <Text style={styles.timeLabel}>Ends in</Text>
+            <Text style={styles.time}>{formatTimeRemaining(market.end_date)}</Text>
+          </View>
         </View>
-      )}
-    </View>
-  );
-
-  if (onPress) {
-    return (
-      <TouchableOpacity onPress={onPress} activeOpacity={0.7}>
-        {Content}
+        
+        {!compact && market.description && (
+          <Text style={styles.description} numberOfLines={2}>
+            {market.description}
+          </Text>
+        )}
+        
+        {!compact && (
+          <View style={styles.footer}>
+            <Text style={styles.totalVolume}>
+              Total volume: {formatCurrency(market.total_volume)}
+            </Text>
+            <Text style={styles.updated}>
+              Updated {formatDistanceToNow(new Date(market.updated_at), { addSuffix: true })}
+            </Text>
+          </View>
+        )}
       </TouchableOpacity>
-    );
-  }
-
-  return Content;
+    </Animated.View>
+  );
 }
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: Colors.surface,
+    backgroundColor: '#1A1A2E',
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
     borderWidth: 1,
     borderColor: Colors.border,
+    width: '100%',
   },
   compactCard: {
     padding: 12,
@@ -189,17 +229,24 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   price: {
-    fontSize: 20,
+    fontSize: 42,
     fontWeight: '700',
+    marginBottom: 4,
   },
-  timeColumn: {
-    alignItems: 'center',
-    flex: 1,
+  change24h: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  divider: {
+    width: 1,
+    height: 60,
+    backgroundColor: Colors.border,
+    marginHorizontal: 16,
   },
   timeLabel: {
     fontSize: 12,
     color: Colors.textSecondary,
-    marginBottom: 4,
+    marginTop: 8,
   },
   time: {
     fontSize: 14,

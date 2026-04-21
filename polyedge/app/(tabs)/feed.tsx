@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, FlatList } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/Colors';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -20,7 +20,7 @@ export default function FeedScreen() {
   } = useMarkets({
     category: selectedCategory,
     sortBy,
-    limit: 20,
+    limit: 50,
   });
   
   const {
@@ -40,10 +40,22 @@ export default function FeedScreen() {
     setSortBy(sort);
   };
 
-  const handleMarketPress = (marketId: string) => {
-    // TODO: Navigate to market detail screen
-    console.log('Market pressed:', marketId);
-  };
+  const categoriesToShow = ['All', 'Politics', 'Crypto', 'Sports', 'Science', 'Business'];
+
+  const renderMarketItem = ({ item }: { item: any }) => (
+    <MarketCard market={item} />
+  );
+
+  const renderSkeleton = () => (
+    <>
+      <SkeletonCard />
+      <SkeletonCard />
+      <SkeletonCard />
+      <SkeletonCard />
+      <SkeletonCard />
+      <SkeletonCard />
+    </>
+  );
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -54,8 +66,74 @@ export default function FeedScreen() {
         </TouchableOpacity>
       </View>
       
+      <View style={styles.sortContainer}>
+        <TouchableOpacity 
+          style={[styles.sortChip, sortBy === 'volume' && styles.activeSortChip]}
+          onPress={() => handleSortPress('volume')}
+        >
+          <Text style={[styles.sortText, sortBy === 'volume' && styles.activeSortText]}>
+            Volume
+          </Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity 
+          style={[styles.sortChip, sortBy === 'newest' && styles.activeSortChip]}
+          onPress={() => handleSortPress('newest')}
+        >
+          <Text style={[styles.sortText, sortBy === 'newest' && styles.activeSortText]}>
+            Newest
+          </Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity 
+          style={[styles.sortChip, sortBy === 'ending_soon' && styles.activeSortChip]}
+          onPress={() => handleSortPress('ending_soon')}
+        >
+          <Text style={[styles.sortText, sortBy === 'ending_soon' && styles.activeSortText]}>
+            Ending Soon
+          </Text>
+        </TouchableOpacity>
+      </View>
+      
       <ScrollView 
-        style={styles.scrollView} 
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.categoryScrollView}
+        contentContainerStyle={styles.categoryScrollContent}
+      >
+        <TouchableOpacity 
+          style={[styles.categoryChip, !selectedCategory && styles.activeCategoryChip]}
+          onPress={() => setSelectedCategory(undefined)}
+        >
+          <Text style={[styles.categoryText, !selectedCategory && styles.activeCategoryText]}>
+            All
+          </Text>
+        </TouchableOpacity>
+        
+        {categoriesToShow.slice(1).map((category) => (
+          <TouchableOpacity 
+            key={category}
+            style={[
+              styles.categoryChip, 
+              selectedCategory === category && styles.activeCategoryChip
+            ]}
+            onPress={() => handleCategoryPress(category)}
+          >
+            <Text style={[
+              styles.categoryText, 
+              selectedCategory === category && styles.activeCategoryText
+            ]}>
+              {category}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+      
+      <FlatList
+        data={markets}
+        renderItem={renderMarketItem}
+        keyExtractor={(item) => item.id}
+        contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
@@ -65,75 +143,8 @@ export default function FeedScreen() {
             colors={[Colors.accent]}
           />
         }
-      >
-        <View style={styles.sortContainer}>
-          <TouchableOpacity 
-            style={[styles.sortChip, sortBy === 'volume' && styles.activeSortChip]}
-            onPress={() => handleSortPress('volume')}
-          >
-            <Text style={[styles.sortText, sortBy === 'volume' && styles.activeSortText]}>
-              Volume
-            </Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity 
-            style={[styles.sortChip, sortBy === 'newest' && styles.activeSortChip]}
-            onPress={() => handleSortPress('newest')}
-          >
-            <Text style={[styles.sortText, sortBy === 'newest' && styles.activeSortText]}>
-              Newest
-            </Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity 
-            style={[styles.sortChip, sortBy === 'ending_soon' && styles.activeSortChip]}
-            onPress={() => handleSortPress('ending_soon')}
-          >
-            <Text style={[styles.sortText, sortBy === 'ending_soon' && styles.activeSortText]}>
-              Ending Soon
-            </Text>
-          </TouchableOpacity>
-        </View>
-        
-        <View style={styles.categoryContainer}>
-          <TouchableOpacity 
-            style={[styles.categoryChip, !selectedCategory && styles.activeCategoryChip]}
-            onPress={() => setSelectedCategory(undefined)}
-          >
-            <Text style={[styles.categoryText, !selectedCategory && styles.activeCategoryText]}>
-              All
-            </Text>
-          </TouchableOpacity>
-          
-          {isLoadingCategories ? (
-            <>
-              <View style={styles.categorySkeleton} />
-              <View style={styles.categorySkeleton} />
-              <View style={styles.categorySkeleton} />
-            </>
-          ) : (
-            categories?.map((category) => (
-              <TouchableOpacity 
-                key={category}
-                style={[
-                  styles.categoryChip, 
-                  selectedCategory === category && styles.activeCategoryChip
-                ]}
-                onPress={() => handleCategoryPress(category)}
-              >
-                <Text style={[
-                  styles.categoryText, 
-                  selectedCategory === category && styles.activeCategoryText
-                ]}>
-                  {category}
-                </Text>
-              </TouchableOpacity>
-            ))
-          )}
-        </View>
-        
-        <View style={styles.content}>
-          {isError ? (
+        ListEmptyComponent={
+          isError ? (
             <View style={styles.errorContainer}>
               <Ionicons name="alert-circle-outline" size={64} color={Colors.error} />
               <Text style={styles.errorTitle}>Failed to load markets</Text>
@@ -145,21 +156,7 @@ export default function FeedScreen() {
               </TouchableOpacity>
             </View>
           ) : isLoading ? (
-            <>
-              <SkeletonCard />
-              <SkeletonCard />
-              <SkeletonCard />
-              <SkeletonCard />
-              <SkeletonCard />
-            </>
-          ) : markets && markets.length > 0 ? (
-            markets.map((market) => (
-              <MarketCard
-                key={market.id}
-                market={market}
-                onPress={() => handleMarketPress(market.id)}
-              />
-            ))
+            renderSkeleton()
           ) : (
             <View style={styles.emptyContainer}>
               <Ionicons name="flame-outline" size={64} color={Colors.textSecondary} />
@@ -171,9 +168,10 @@ export default function FeedScreen() {
                 }
               </Text>
             </View>
-          )}
-          
-          {markets && markets.length > 0 && (
+          )
+        }
+        ListFooterComponent={
+          markets && markets.length > 0 ? (
             <View style={styles.footer}>
               <Text style={styles.footerText}>
                 Showing {markets.length} market{markets.length !== 1 ? 's' : ''}
@@ -187,9 +185,9 @@ export default function FeedScreen() {
                 </TouchableOpacity>
               )}
             </View>
-          )}
-        </View>
-      </ScrollView>
+          ) : null
+        }
+      />
     </SafeAreaView>
   );
 }
@@ -216,9 +214,6 @@ const styles = StyleSheet.create({
   },
   settingsButton: {
     padding: 4,
-  },
-  scrollView: {
-    flex: 1,
   },
   sortContainer: {
     flexDirection: 'row',
@@ -249,13 +244,15 @@ const styles = StyleSheet.create({
   activeSortText: {
     color: Colors.background,
   },
-  categoryContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+  categoryScrollView: {
+    backgroundColor: Colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
+  categoryScrollContent: {
     paddingHorizontal: 16,
     paddingVertical: 12,
     gap: 8,
-    backgroundColor: Colors.surface,
   },
   categoryChip: {
     paddingHorizontal: 16,
@@ -277,13 +274,7 @@ const styles = StyleSheet.create({
   activeCategoryText: {
     color: Colors.background,
   },
-  categorySkeleton: {
-    width: 80,
-    height: 32,
-    backgroundColor: Colors.elevated,
-    borderRadius: 20,
-  },
-  content: {
+  listContent: {
     padding: 16,
   },
   errorContainer: {

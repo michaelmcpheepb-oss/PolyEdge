@@ -11,8 +11,9 @@ export function useMarkets(options?: {
   return useQuery({
     queryKey: ['markets', options],
     queryFn: () => getMarkets(options),
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    gcTime: 10 * 60 * 1000, // 10 minutes
+    staleTime: 60000, // 1 minute
+    gcTime: 5 * 60 * 1000, // 5 minutes
+    refetchInterval: 60000, // Refetch every 60 seconds
     enabled: options?.enabled ?? true,
   });
 }
@@ -38,8 +39,8 @@ export function useInfiniteMarkets(options?: {
       return allPages.length;
     },
     initialPageParam: 0,
-    staleTime: 5 * 60 * 1000,
-    gcTime: 10 * 60 * 1000,
+    staleTime: 60000,
+    gcTime: 5 * 60 * 1000,
   });
 }
 
@@ -62,7 +63,7 @@ export function useMarketCategories() {
   return useQuery({
     queryKey: ['marketCategories'],
     queryFn: async () => {
-      const markets = await getMarkets();
+      const markets = await getMarkets({ limit: 100 });
       const categories = new Set<string>();
       markets.forEach(market => {
         if (market.category) {

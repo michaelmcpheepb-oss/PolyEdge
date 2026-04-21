@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, StyleSheet } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { View, StyleSheet, Animated } from 'react-native';
 import { Colors } from '../constants/Colors';
 
 interface SkeletonCardProps {
@@ -7,8 +7,33 @@ interface SkeletonCardProps {
 }
 
 export function SkeletonCard({ compact = false }: SkeletonCardProps) {
+  const pulseAnim = useRef(new Animated.Value(0.4)).current;
+
+  useEffect(() => {
+    const pulse = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, {
+          toValue: 0.8,
+          duration: 900,
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulseAnim, {
+          toValue: 0.4,
+          duration: 900,
+          useNativeDriver: true,
+        }),
+      ])
+    );
+    
+    pulse.start();
+    
+    return () => {
+      pulse.stop();
+    };
+  }, []);
+
   return (
-    <View style={[styles.card, compact && styles.compactCard]}>
+    <Animated.View style={[styles.card, compact && styles.compactCard, { opacity: pulseAnim }]}>
       <View style={styles.header}>
         <View style={styles.categorySkeleton} />
         <View style={styles.volumeSkeleton} />
@@ -21,14 +46,14 @@ export function SkeletonCard({ compact = false }: SkeletonCardProps) {
         <View style={styles.priceColumn}>
           <View style={styles.priceLabelSkeleton} />
           <View style={styles.priceSkeleton} />
+          <View style={styles.changeSkeleton} />
         </View>
+        
+        <View style={styles.dividerSkeleton} />
         
         <View style={styles.priceColumn}>
           <View style={styles.priceLabelSkeleton} />
           <View style={styles.priceSkeleton} />
-        </View>
-        
-        <View style={styles.timeColumn}>
           <View style={styles.timeLabelSkeleton} />
           <View style={styles.timeSkeleton} />
         </View>
@@ -44,18 +69,19 @@ export function SkeletonCard({ compact = false }: SkeletonCardProps) {
           <View style={styles.footerSkeletonShort} />
         </View>
       )}
-    </View>
+    </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: Colors.surface,
+    backgroundColor: '#1A1A2E',
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
     borderWidth: 1,
     borderColor: Colors.border,
+    width: '100%',
   },
   compactCard: {
     padding: 12,
@@ -111,20 +137,30 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   priceSkeleton: {
+    width: 100,
+    height: 42,
+    backgroundColor: Colors.elevated,
+    borderRadius: 4,
+    marginBottom: 4,
+  },
+  changeSkeleton: {
     width: 50,
-    height: 24,
+    height: 14,
     backgroundColor: Colors.elevated,
     borderRadius: 4,
   },
-  timeColumn: {
-    alignItems: 'center',
-    flex: 1,
+  dividerSkeleton: {
+    width: 1,
+    height: 60,
+    backgroundColor: Colors.elevated,
+    marginHorizontal: 16,
   },
   timeLabelSkeleton: {
     width: 40,
     height: 12,
     backgroundColor: Colors.elevated,
     borderRadius: 4,
+    marginTop: 8,
     marginBottom: 4,
   },
   timeSkeleton: {
