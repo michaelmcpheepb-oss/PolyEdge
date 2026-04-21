@@ -9,6 +9,8 @@ Notifications.setNotificationHandler({
     shouldShowAlert: true,
     shouldPlaySound: true,
     shouldSetBadge: true,
+    shouldShowBanner: true,
+    shouldShowList: true,
   }),
 });
 
@@ -128,7 +130,7 @@ async function checkSingleAlert(alert: Alert) {
           .gte('timestamp', new Date(Date.now() - 5 * 60 * 1000).toISOString()) // Last 5 minutes
           .limit(1);
         
-        conditionMet = whaleTrades && whaleTrades.length > 0;
+        conditionMet = !!(whaleTrades && whaleTrades.length > 0);
         message = `Whale trade of $${threshold}+ detected on "${market.question}"`;
         break;
     }

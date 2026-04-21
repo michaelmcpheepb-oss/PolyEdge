@@ -27,7 +27,7 @@ export default function WhalesScreen() {
   });
 
   const thresholdOptions = [1000, 5000, 10000, 25000, 50000];
-  const timeframeOptions = [
+  const timeframeOptions: { value: '24h' | '7d' | '30d'; label: string }[] = [
     { value: '24h', label: '24H' },
     { value: '7d', label: '7D' },
     { value: '30d', label: '30D' },

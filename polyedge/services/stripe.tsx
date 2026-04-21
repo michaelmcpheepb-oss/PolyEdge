@@ -1,3 +1,4 @@
+import React from 'react';
 import { StripeProvider, useStripe } from '@stripe/stripe-react-native';
 import { Alert, Linking } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
@@ -17,7 +18,7 @@ export interface SubscriptionPlan {
   id: string;
   name: string;
   price: number;
-  interval: 'month' | 'year';
+  interval: 'week' | 'month' | 'year';
   stripePriceId: string;
   description: string;
 }
@@ -224,7 +225,7 @@ export function StripeProviderWrapper({ children }: { children: React.ReactNode 
       merchantIdentifier="merchant.com.polyedge"
       urlScheme="polyedge"
     >
-      {children}
+      {children as any}
     </StripeProvider>
   );
 }
