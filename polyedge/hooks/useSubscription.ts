@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+import { checkSubscriptionStatus, SUBSCRIPTION_PLANS } from '../services/stripe';
 
 export interface Subscription {
   user_id: string;
@@ -15,8 +16,6 @@ export function useSubscription(userId?: string) {
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   
-  // For now, hardcode to free
-  // In production, this would fetch from Supabase
   useEffect(() => {
     const loadSubscription = async () => {
       if (!userId) {
@@ -26,22 +25,30 @@ export function useSubscription(userId?: string) {
       }
       
       try {
-        // TODO: Fetch subscription from Supabase
-        // const { data, error } = await supabase
-        //   .from('subscriptions')
-        //   .select('*')
-        //   .eq('user_id', userId)
-        //   .single();
+        // Check subscription status from Stripe/Supabase
+        const status = await checkSubscriptionStatus(userId);
         
-        // For now, return free subscription
+        if (status.isActive) {
+          setSubscription({
+            user_id: userId,
+            plan: 'pro',
+            period_end: status.currentPeriodEnd || undefined,
+            updated_at: new Date().toISOString(),
+          });
+        } else {
+          setSubscription({
+            user_id: userId,
+            plan: 'free',
+            updated_at: new Date().toISOString(),
+          });
+        }
+      } catch (error) {
+        console.error('Error loading subscription:', error);
         setSubscription({
           user_id: userId,
           plan: 'free',
           updated_at: new Date().toISOString(),
         });
-      } catch (error) {
-        console.error('Error loading subscription:', error);
-        setSubscription(null);
       } finally {
         setIsLoading(false);
       }
@@ -59,6 +66,15 @@ export function useSubscription(userId?: string) {
     ? Math.ceil((new Date(subscription.trial_ends_at).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
     : 0;
   
+  // Get subscription plans
+  const getPlanById = (planId: string) => {
+    return SUBSCRIPTION_PLANS.find(plan => plan.id === planId);
+  };
+  
+  const getPlanByStripePriceId = (priceId: string) => {
+    return SUBSCRIPTION_PLANS.find(plan => plan.stripePriceId === priceId);
+  };
+  
   return {
     subscription,
     isLoading,
@@ -66,5 +82,8 @@ export function useSubscription(userId?: string) {
     isTrial,
     daysLeftInTrial,
     plan: subscription?.plan || 'free',
+    plans: SUBSCRIPTION_PLANS,
+    getPlanById,
+    getPlanByStripePriceId,
   };
 }

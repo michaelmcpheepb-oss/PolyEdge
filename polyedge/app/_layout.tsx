@@ -3,15 +3,47 @@ import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Colors } from '../constants/Colors';
+import { StripeProviderWrapper } from '../services/stripe';
+import { useEffect } from 'react';
+import * as Linking from 'expo-linking';
+import { handleStripeRedirect } from '../services/stripe';
 
 const queryClient = new QueryClient();
 
 export default function RootLayout() {
+  // Handle deep links for Stripe checkout
+  useEffect(() => {
+    const handleDeepLink = (event: { url: string }) => {
+      console.log('🔗 Deep link received:', event.url);
+      
+      // For now, use a mock userId - in production, get from auth
+      const userId = 'user_mock_id';
+      
+      // Handle Stripe redirect
+      handleStripeRedirect(event.url, userId);
+    };
+    
+    // Get initial URL if app was opened with a deep link
+    Linking.getInitialURL().then((url) => {
+      if (url) {
+        handleDeepLink({ url });
+      }
+    });
+    
+    // Listen for deep links while app is running
+    const subscription = Linking.addEventListener('url', handleDeepLink);
+    
+    return () => {
+      subscription.remove();
+    };
+  }, []);
+  
   return (
     <SafeAreaProvider>
       <QueryClientProvider client={queryClient}>
-        <StatusBar style="light" backgroundColor={Colors.background} />
-        <Stack screenOptions={{ headerShown: false }}>
+        <StripeProviderWrapper>
+          <StatusBar style="light" backgroundColor={Colors.background} />
+          <Stack screenOptions={{ headerShown: false }}>
           <Stack.Screen name="(tabs)" />
           <Stack.Screen 
             name="market/[id]" 
@@ -71,6 +103,7 @@ export default function RootLayout() {
             }} 
           />
         </Stack>
+        </StripeProviderWrapper>
       </QueryClientProvider>
     </SafeAreaProvider>
   );

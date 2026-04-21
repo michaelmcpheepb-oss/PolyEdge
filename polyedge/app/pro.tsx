@@ -4,11 +4,17 @@ import { Colors } from '../constants/Colors';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
+import { createCheckoutSession, openStripeCheckout, SUBSCRIPTION_PLANS } from '../services/stripe';
+import { useSubscription } from '../hooks/useSubscription';
 
 export default function ProScreen() {
   const router = useRouter();
-  const [selectedPlan, setSelectedPlan] = useState<'monthly' | 'yearly'>('yearly');
+  const [selectedPlan, setSelectedPlan] = useState<'pro_weekly' | 'pro_monthly'>('pro_monthly');
   const [isProcessing, setIsProcessing] = useState(false);
+  
+  // For now, use mock userId - in production, get from auth
+  const userId = 'user_mock_id';
+  const { isPro, isLoading } = useSubscription(userId);
   
   const proFeatures = [
     {
@@ -44,32 +50,151 @@ export default function ProScreen() {
   ];
   
   const handleStartTrial = async () => {
+    if (isPro) {
+      Alert.alert('Already Pro', 'You already have an active Pro subscription!');
+      return;
+    }
+    
     setIsProcessing(true);
     
-    // Simulate payment processing
-    setTimeout(() => {
-      setIsProcessing(false);
+    try {
+      // Get selected plan
+      const plan = SUBSCRIPTION_PLANS.find(p => p.id === selectedPlan);
+      if (!plan) {
+        throw new Error('Invalid plan selected');
+      }
       
+      // Create checkout session
+      const checkoutUrl = await createCheckoutSession(plan.stripePriceId, userId);
+      
+      if (!checkoutUrl) {
+        throw new Error('Failed to create checkout session');
+      }
+      
+      // Open Stripe checkout in browser
+      const result = await openStripeCheckout(checkoutUrl);
+      
+      if (result.success) {
+        Alert.alert(
+          'Success!',
+          'Your PolyEdge Pro subscription is now active. Enjoy all Pro features!',
+          [
+            {
+              text: 'OK',
+              onPress: () => router.back(),
+            },
+          ]
+        );
+      } else {
+        Alert.alert(
+          'Checkout Cancelled',
+          'Your payment was not completed. You can try again anytime.',
+          [{ text: 'OK' }]
+        );
+      }
+    } catch (error) {
+      console.error('Error during checkout:', error);
       Alert.alert(
-        'Coming Soon',
-        'Stripe integration will be added soon. For now, enjoy a simulated Pro experience!',
-        [
-          {
-            text: 'OK',
-            onPress: () => router.back(),
-          },
-        ]
+        'Error',
+        'Something went wrong during checkout. Please try again.',
+        [{ text: 'OK' }]
       );
-    }, 1500);
+    } finally {
+      setIsProcessing(false);
+    }
   };
   
   const handleRestorePurchase = () => {
     Alert.alert(
       'Restore Purchase',
-      'This feature will be available when Stripe is integrated.',
+      'This feature will be available when you set up your backend API.',
       [{ text: 'OK' }]
     );
   };
+  
+  if (isLoading) {
+    return (
+      <SafeAreaView style={styles.container} edges={['top']}>
+        <View style={styles.header}>
+          <TouchableOpacity 
+            style={styles.backButton}
+            onPress={() => router.back()}
+          >
+            <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
+          </TouchableOpacity>
+          <View style={styles.headerTitle}>
+            <Text style={styles.headerTitleText}>PolyEdge Pro</Text>
+          </View>
+          <View style={styles.headerRight} />
+        </View>
+        <View style={styles.loadingContainer}>
+          <Text style={styles.loadingText}>Loading...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+  
+  if (isPro) {
+    return (
+      <SafeAreaView style={styles.container} edges={['top']}>
+        <View style={styles.header}>
+          <TouchableOpacity 
+            style={styles.backButton}
+            onPress={() => router.back()}
+          >
+            <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
+          </TouchableOpacity>
+          <View style={styles.headerTitle}>
+            <Text style={styles.headerTitleText}>PolyEdge Pro</Text>
+          </View>
+          <View style={styles.headerRight} />
+        </View>
+        
+        <ScrollView 
+          style={styles.scrollView}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
+        >
+          <View style={styles.proActiveSection}>
+            <View style={styles.proBadge}>
+              <Ionicons name="sparkles" size={48} color={Colors.accent} />
+            </View>
+            <Text style={styles.proActiveTitle}>You're a Pro! 🎉</Text>
+            <Text style={styles.proActiveSubtitle}>
+              Thank you for subscribing to PolyEdge Pro
+            </Text>
+            
+            <View style={styles.activeFeatures}>
+              <Text style={styles.activeFeaturesTitle}>Your Pro Features:</Text>
+              {proFeatures.map((feature, index) => (
+                <View key={index} style={styles.activeFeatureItem}>
+                  <Text style={styles.activeFeatureIcon}>{feature.icon}</Text>
+                  <View style={styles.activeFeatureText}>
+                    <Text style={styles.activeFeatureTitle}>{feature.title}</Text>
+                    <Text style={styles.activeFeatureDescription}>{feature.description}</Text>
+                  </View>
+                  <Ionicons name="checkmark-circle" size={24} color={Colors.success} />
+                </View>
+              ))}
+            </View>
+            
+            <TouchableOpacity 
+              style={styles.manageSubscriptionButton}
+              onPress={() => {
+                Alert.alert(
+                  'Manage Subscription',
+                  'You can manage your subscription through the customer portal.',
+                  [{ text: 'OK' }]
+                );
+              }}
+            >
+              <Text style={styles.manageSubscriptionText}>Manage Subscription</Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -121,17 +246,44 @@ export default function ProScreen() {
           <Text style={styles.sectionTitle}>Choose Your Plan</Text>
           
           <View style={styles.pricingCards}>
+            {/* Weekly Plan */}
+            <TouchableOpacity 
+              style={[
+                styles.pricingCard,
+                selectedPlan === 'pro_weekly' && styles.selectedPricingCard
+              ]}
+              onPress={() => setSelectedPlan('pro_weekly')}
+            >
+              <View style={styles.pricingCardHeader}>
+                <Text style={styles.pricingPlan}>Weekly</Text>
+                {selectedPlan === 'pro_weekly' && (
+                  <View style={styles.selectedBadge}>
+                    <Ionicons name="checkmark" size={16} color={Colors.background} />
+                  </View>
+                )}
+              </View>
+              <Text style={styles.pricingPrice}>€2.50</Text>
+              <Text style={styles.pricingPeriod}>per week</Text>
+              <Text style={styles.pricingDescription}>
+                Try it out for a week
+              </Text>
+            </TouchableOpacity>
+            
             {/* Monthly Plan */}
             <TouchableOpacity 
               style={[
                 styles.pricingCard,
-                selectedPlan === 'monthly' && styles.selectedPricingCard
+                selectedPlan === 'pro_monthly' && styles.selectedPricingCard,
+                styles.monthlyCard,
               ]}
-              onPress={() => setSelectedPlan('monthly')}
+              onPress={() => setSelectedPlan('pro_monthly')}
             >
               <View style={styles.pricingCardHeader}>
                 <Text style={styles.pricingPlan}>Monthly</Text>
-                {selectedPlan === 'monthly' && (
+                <View style={styles.saveBadge}>
+                  <Text style={styles.saveBadgeText}>Popular</Text>
+                </View>
+                {selectedPlan === 'pro_monthly' && (
                   <View style={styles.selectedBadge}>
                     <Ionicons name="checkmark" size={16} color={Colors.background} />
                   </View>
@@ -140,37 +292,14 @@ export default function ProScreen() {
               <Text style={styles.pricingPrice}>€9.99</Text>
               <Text style={styles.pricingPeriod}>per month</Text>
               <Text style={styles.pricingDescription}>
-                Flexible monthly billing
-              </Text>
-            </TouchableOpacity>
-            
-            {/* Yearly Plan */}
-            <TouchableOpacity 
-              style={[
-                styles.pricingCard,
-                selectedPlan === 'yearly' && styles.selectedPricingCard,
-                styles.yearlyCard,
-              ]}
-              onPress={() => setSelectedPlan('yearly')}
-            >
-              <View style={styles.pricingCardHeader}>
-                <Text style={styles.pricingPlan}>Yearly</Text>
-                <View style={styles.saveBadge}>
-                  <Text style={styles.saveBadgeText}>Save 33%</Text>
-                </View>
-                {selectedPlan === 'yearly' && (
-                  <View style={styles.selectedBadge}>
-                    <Ionicons name="checkmark" size={16} color={Colors.background} />
-                  </View>
-                )}
-              </View>
-              <Text style={styles.pricingPrice}>€79.99</Text>
-              <Text style={styles.pricingPeriod}>per year</Text>
-              <Text style={styles.pricingDescription}>
-                Best value - equivalent to €6.67/month
+                Best for regular traders
               </Text>
             </TouchableOpacity>
           </View>
+          
+          <Text style={styles.testModeNotice}>
+            ⚡ Test Mode: Use Stripe test card 4242 4242 4242 4242
+          </Text>
         </View>
         
         {/* Trial Info */}
@@ -178,6 +307,14 @@ export default function ProScreen() {
           <Ionicons name="time-outline" size={20} color={Colors.accent} />
           <Text style={styles.trialInfoText}>
             Start your 7-day free trial. Cancel anytime.
+          </Text>
+        </View>
+        
+        {/* Test Mode Info */}
+        <View style={styles.trialInfo}>
+          <Ionicons name="card-outline" size={20} color={Colors.warning} />
+          <Text style={[styles.trialInfoText, { color: Colors.warning }]}>
+            Test Mode: Use card 4242 4242 4242 4242
           </Text>
         </View>
         
@@ -246,6 +383,15 @@ const styles = StyleSheet.create({
   },
   headerRight: {
     width: 32,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    fontSize: 16,
+    color: Colors.textSecondary,
   },
   scrollView: {
     flex: 1,
@@ -382,6 +528,20 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: Colors.textSecondary,
   },
+  monthlyCard: {
+    borderColor: Colors.accent,
+  },
+  testModeNotice: {
+    fontSize: 12,
+    color: Colors.warning,
+    textAlign: 'center',
+    marginTop: 16,
+    padding: 12,
+    backgroundColor: Colors.warning + '20',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: Colors.warning + '40',
+  },
   trialInfo: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -445,4 +605,71 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: Colors.textSecondary,
   },
-});
+  proActiveSection: {
+    alignItems: 'center',
+    padding: 32,
+  },
+  proBadge: {
+    marginBottom: 16,
+  },
+  proActiveTitle: {
+    fontSize: 32,
+    fontWeight: '700',
+    color: Colors.accent,
+    marginBottom: 8,
+  },
+  proActiveSubtitle: {
+    fontSize: 16,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+    marginBottom: 32,
+  },
+  activeFeatures: {
+    width: '100%',
+    marginBottom: 32,
+  },
+  activeFeaturesTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: Colors.textPrimary,
+    marginBottom: 16,
+  },
+  activeFeatureItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.elevated,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  activeFeatureIcon: {
+    fontSize: 24,
+    marginRight: 12,
+  },
+  activeFeatureText: {
+    flex: 1,
+  },
+  activeFeatureTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: Colors.textPrimary,
+    marginBottom: 4,
+  },
+  activeFeatureDescription: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    lineHeight: 16,
+  },
+  manageSubscriptionButton: {
+    backgroundColor: Colors.accent,
+    paddingHorizontal: 32,
+    paddingVertical: 16,
+    borderRadius: 24,
+  },
+  manageSubscriptionText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: Colors.background,
+  },

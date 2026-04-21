@@ -21,7 +21,7 @@
       "polymarketGammaApi": "https://gamma-api.polymarket.com",
       "polymarketClobApi": "https://clob.polymarket.com",
       "polymarketDataApi": "https://data-api.polymarket.com",
-      "stripePublishableKey": "pk_test_placeholder",
+      "stripePublishableKey": "pk_test_51TMOa62F8prHOW8KP0qEZkyEp1p4N470Y2tLAP2dwkMUgBEbetw5Lea8KMHYFe5Mpbi7GQsd01An8pmi70NOpF9Y00R0hQTusA",
       "stripeSecretKey": "sk_test_placeholder",
       "expoProjectId": "placeholder"
     },
@@ -65,9 +65,6 @@
           }
         }
       ],
-      [
-        "expo-haptics"
-      ]
     ]
   }
 }
