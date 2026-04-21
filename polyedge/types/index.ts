@@ -48,9 +48,9 @@ export interface Alert {
   user_id: string;
   market_id: string;
   market_question: string;
-  alert_type: 'price_above' | 'price_below' | 'price_move' | 'whale_trade';
-  threshold: number;
-  is_active: boolean;
+  alert_type: 'price_above' | 'price_below' | 'move_24h' | 'whale_trade';
+  threshold_value: number;
+  active: boolean;
   last_triggered_at?: string;
   created_at: string;
 }
