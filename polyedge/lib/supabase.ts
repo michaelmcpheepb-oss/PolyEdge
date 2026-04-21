@@ -6,13 +6,14 @@ import {
 } from '../constants/Config';
 
 // Create Supabase client with service role key for server-side operations
+// The service role key should bypass RLS
 export const supabase = createClient(
   SUPABASE_URL!,
-  SUPABASE_SERVICE_ROLE_KEY!,
+  SUPABASE_SERVICE_ROLE_KEY!, // This is the service role JWT
   {
     auth: {
-      autoRefreshToken: false,
       persistSession: false,
+      autoRefreshToken: false,
     },
   }
 );
@@ -23,8 +24,8 @@ export const supabaseClient = createClient(
   SUPABASE_ANON_KEY!,
   {
     auth: {
-      autoRefreshToken: true,
       persistSession: true,
+      autoRefreshToken: true,
     },
   }
 );
