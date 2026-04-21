@@ -138,8 +138,9 @@ export default function MarketDetailScreen() {
     );
   }
 
-  const yesPrice = market.yes_price * 100;
-  const noPrice = market.no_price * 100;
+  const yesPrice = market?.yes_price ? market.yes_price * 100 : 0;
+  const noPrice = market?.no_price ? market.no_price * 100 : 0;
+  const question = market?.question ?? 'Loading...';
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -177,7 +178,7 @@ export default function MarketDetailScreen() {
         
         {/* Section 2: Market Question */}
         <View style={styles.questionSection}>
-          <Text style={styles.question}>{market.question}</Text>
+          <Text style={styles.question}>{question}</Text>
           {market.description && (
             <Text style={styles.description}>{market.description}</Text>
           )}

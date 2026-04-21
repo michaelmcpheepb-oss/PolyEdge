@@ -11,9 +11,7 @@ export async function openStripeCheckout(
   userId: string
 ): Promise<void> {
   const priceId = STRIPE_PRICES[plan];
-  const checkoutUrl =
-    `https://buy.stripe.com/[PAYMENT_LINK_ID]` +
-    `?client_reference_id=${userId}`;
+  const checkoutUrl = `https://buy.stripe.com/test_placeholder?client_reference_id=${userId}`;
 
   try {
     await WebBrowser.openBrowserAsync(checkoutUrl, {

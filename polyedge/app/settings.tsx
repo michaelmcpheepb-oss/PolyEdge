@@ -11,6 +11,37 @@ import * as WebBrowser from 'expo-web-browser';
 export default function SettingsScreen() {
   const router = useRouter();
   const { user, signOut, showAuthSheet } = useUserStore();
+  
+  // If no user, show sign in prompt
+  if (!user) {
+    return (
+      <SafeAreaView style={styles.container} edges={['top']}>
+        <View style={styles.header}>
+          <TouchableOpacity 
+            style={styles.backButton}
+            onPress={() => router.back()}
+          >
+            <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
+          </TouchableOpacity>
+          <View style={styles.headerTitle}>
+            <Text style={styles.headerTitleText}>Settings</Text>
+          </View>
+          <View style={styles.headerRight} />
+        </View>
+        
+        <View style={styles.signInPromptContainer}>
+          <Ionicons name="person-circle-outline" size={64} color={Colors.textSecondary} />
+          <Text style={styles.signInPromptTitle}>Sign In Required</Text>
+          <Text style={styles.signInPromptText}>
+            Please sign in to access settings and save your preferences
+          </Text>
+          <TouchableOpacity style={styles.signInPromptButton} onPress={showAuthSheet}>
+            <Text style={styles.signInPromptButtonText}>Sign In</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
   const { 
     categories, 
     whaleThreshold, 
@@ -550,5 +581,38 @@ const styles = StyleSheet.create({
   copyrightText: {
     fontSize: 12,
     color: Colors.textTertiary,
+  },
+  signInPromptContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 32,
+  },
+  signInPromptTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: Colors.textPrimary,
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  signInPromptText: {
+    fontSize: 16,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+    marginBottom: 32,
+    lineHeight: 22,
+  },
+  signInPromptButton: {
+    backgroundColor: Colors.accent,
+    borderRadius: 12,
+    height: 52,
+    paddingHorizontal: 32,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  signInPromptButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.background,
   },
 });

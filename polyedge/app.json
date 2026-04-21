@@ -47,23 +47,5 @@
     "extra": {
       "eas": { "projectId": "[RUN npx eas init TO GET THIS]" }
     }
-    },
-    "plugins": [
-      "expo-router",
-      "expo-web-browser",
-      "expo-notifications",
-      [
-        "expo-splash-screen",
-        {
-          "backgroundColor": "#0D0D1A",
-          "image": "./assets/splash-icon.png",
-          "imageWidth": 200,
-          "dark": {
-            "backgroundColor": "#0D0D1A",
-            "image": "./assets/splash-icon.png"
-          }
-        }
-      ],
-    ]
   }
 }

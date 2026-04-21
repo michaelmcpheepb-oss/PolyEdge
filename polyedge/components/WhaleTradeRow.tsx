@@ -10,8 +10,11 @@ interface WhaleTradeRowProps {
 }
 
 export function WhaleTradeRow({ trade, onPress }: WhaleTradeRowProps) {
+  const tradeTime = trade?.timestamp ? new Date(trade.timestamp) : new Date();
+  const amount = trade?.amount_usd ?? 0;
+  const outcome = trade?.outcome ?? 'YES';
+  
   const isRecent = () => {
-    const tradeTime = new Date(trade.timestamp);
     const now = new Date();
     const diffMinutes = (now.getTime() - tradeTime.getTime()) / (1000 * 60);
     return diffMinutes < 5;
@@ -46,8 +49,8 @@ export function WhaleTradeRow({ trade, onPress }: WhaleTradeRowProps) {
     }
   };
 
-  const isBuy = trade.side === 'BUY';
-  const isYes = trade.outcome === 'YES';
+  const isBuy = trade?.side === 'BUY';
+  const isYes = outcome === 'YES';
   const amountColor = isBuy ? Colors.success : Colors.error;
   const tradeType = `${isBuy ? 'BUY' : 'SELL'} ${isYes ? 'YES' : 'NO'}`;
 
@@ -81,7 +84,7 @@ export function WhaleTradeRow({ trade, onPress }: WhaleTradeRowProps) {
         
         <View style={styles.rightSection}>
           <Text style={[styles.amount, { color: amountColor }]}>
-            {formatAmount(trade.amount_usd)}
+            {formatAmount(amount)}
           </Text>
           <Text style={styles.timeAgo}>
             {formatTimeAgo(trade.timestamp)}
