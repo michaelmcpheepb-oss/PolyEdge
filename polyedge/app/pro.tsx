@@ -305,8 +305,6 @@ export default function ProScreen() {
             </View>
           </View>
         </View>
-          </Text>
-        </View>
         
         {/* Legal Text */}
         <Text style={styles.legalText}>

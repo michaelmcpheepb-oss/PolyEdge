@@ -3,18 +3,19 @@ import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Colors } from '../constants/Colors';
-import { StripeProviderWrapper } from '../services/stripe';
+// Stripe is handled client-side via WebBrowser
 import { useEffect } from 'react';
 import * as Linking from 'expo-linking';
 import { handleStripeRedirect } from '../services/stripe';
 import { supabase } from '../lib/supabase';
 import { useUserStore } from '../stores/useUserStore';
 import { startTrial } from '../services/auth-magic';
+import AuthSheet from '../components/AuthSheet';
 
 const queryClient = new QueryClient();
 
 export default function RootLayout() {
-  const { setSession, setUser } = useUserStore();
+  const { setSession, setUser, isAuthSheetVisible, hideAuthSheet } = useUserStore();
   
   // Handle deep links for Stripe checkout and auth
   useEffect(() => {
@@ -24,7 +25,8 @@ export default function RootLayout() {
       // Handle auth callback
       if (event.url.includes('auth/callback')) {
         try {
-          const { data } = await supabase.auth.getSessionFromUrl({ url: event.url });
+          // For magic link callback, we need to get the session
+        const { data } = await supabase.auth.getSession();
           if (data.session) {
             setSession(data.session);
             setUser(data.session.user);
@@ -84,7 +86,8 @@ export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <QueryClientProvider client={queryClient}>
-        <StripeProviderWrapper>
+        {/* Stripe is handled client-side via WebBrowser */}
+        <>
           <StatusBar style="light" backgroundColor={Colors.background} />
           <Stack screenOptions={{ headerShown: false }}>
           <Stack.Screen name="(tabs)" />
@@ -158,8 +161,8 @@ export default function RootLayout() {
               visible={isAuthSheetVisible}
               onClose={hideAuthSheet}
             />
-          </AppErrorBoundary>
-        </StripeProviderWrapper>
+        </>
+        {/* End Stripe wrapper */}
       </QueryClientProvider>
     </SafeAreaProvider>
   );

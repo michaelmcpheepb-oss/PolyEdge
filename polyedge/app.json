@@ -6,48 +6,47 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
-    "backgroundColor": "#0D0D1A",
-    "newArchEnabled": true,
     "splash": {
-      "image": "./assets/splash-icon.png",
+      "image": "./assets/splash.png",
       "resizeMode": "contain",
       "backgroundColor": "#0D0D1A"
-    },
-    "scheme": "polyedge",
-    "extra": {
-      "supabaseUrl": "https://utbkvjgatqiibfkcpugc.supabase.co",
-      "supabaseAnonKey": "sb_publishable_cmcEdgtywOGznXS5mQ4Bow_q_aTlZhe",
-      "supabaseServiceRoleKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV0Ymt2amdhdHFpaWJma2NwdWdjIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3Njc2MjU2MCwiZXhwIjoyMDkyMzM4NTYwfQ.ztUYEVHHd7PPi_MHo6l7j142ESle2TfulBR1GxNLLT4",
-      "polymarketGammaApi": "https://gamma-api.polymarket.com",
-      "polymarketClobApi": "https://clob.polymarket.com",
-      "polymarketDataApi": "https://data-api.polymarket.com",
-      "stripePublishableKey": "pk_test_51TMOa62F8prHOW8KP0qEZkyEp1p4N470Y2tLAP2dwkMUgBEbetw5Lea8KMHYFe5Mpbi7GQsd01An8pmi70NOpF9Y00R0hQTusA",
-      "stripeSecretKey": "sk_test_placeholder",
-      "expoProjectId": "placeholder"
-    },
-    "ios": {
-      "supportsTablet": true,
-      "bundleIdentifier": "com.polyedge.app",
-      "infoPlist": {
-        "NSFaceIDUsageDescription": "This app uses Face ID for secure authentication."
-      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#0D0D1A"
       },
-      "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false,
       "package": "com.polyedge.app",
+      "versionCode": 1,
       "permissions": [
-        "RECEIVE_BOOT_COMPLETED",
-        "VIBRATE"
+        "android.permission.RECEIVE_BOOT_COMPLETED",
+        "android.permission.VIBRATE",
+        "android.permission.POST_NOTIFICATIONS",
+        "android.permission.INTERNET"
+      ],
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [{ "scheme": "polyedge" }],
+          "category": ["BROWSABLE", "DEFAULT"]
+        }
       ]
     },
-    "web": {
-      "favicon": "./assets/favicon.png",
-      "bundler": "metro"
+    "plugins": [
+      "expo-router",
+      "expo-notifications",
+      ["expo-splash-screen", {"backgroundColor": "#0D0D1A"}],
+      ["@stripe/stripe-react-native", {
+        "merchantIdentifier": "merchant.com.polyedge",
+        "enableGooglePay": false
+      }]
+    ],
+    "scheme": "polyedge",
+    "owner": "michaelmcpheepb-oss",
+    "extra": {
+      "eas": { "projectId": "[RUN npx eas init TO GET THIS]" }
+    }
     },
     "plugins": [
       "expo-router",

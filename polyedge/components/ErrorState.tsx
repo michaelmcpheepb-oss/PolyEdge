@@ -86,7 +86,7 @@ export function ErrorState({
   if (compact) {
     return (
       <View style={styles.compactContainer}>
-        <Ionicons name={config.icon as any} size={20} color={config.color} />
+        <Ionicons name={config.icon as any} size={20} color={Colors.textPrimary} />
         <Text style={styles.compactText}>
           {title || config.defaultTitle}
         </Text>
@@ -156,7 +156,7 @@ export function ErrorState({
           </TouchableOpacity>
         )}
         
-        {type === 'unauthorized' && (
+        {type === 'api' && (
           <TouchableOpacity 
             style={styles.secondaryButton}
             onPress={() => {
@@ -170,7 +170,7 @@ export function ErrorState({
       </View>
       
       {/* Support contact for server errors */}
-      {(type === 'server' || type === 'payment') && (
+      {(type === 'api') && (
         <View style={styles.supportContainer}>
           <Text style={styles.supportText}>
             Still having issues?{' '}

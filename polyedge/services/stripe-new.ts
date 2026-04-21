@@ -1,5 +1,5 @@
 import * as WebBrowser from 'expo-web-browser';
-import { supabase } from './supabase';
+import { supabase } from '../lib/supabase';
 
 const STRIPE_PRICES = {
   weekly: 'price_1TOfxD2F8prHOW8KHwDF8vQB',   // €2.50/week
