@@ -7,19 +7,41 @@ import { StripeProviderWrapper } from '../services/stripe';
 import { useEffect } from 'react';
 import * as Linking from 'expo-linking';
 import { handleStripeRedirect } from '../services/stripe';
+import { supabase } from '../lib/supabase';
+import { useUserStore } from '../stores/useUserStore';
+import { startTrial } from '../services/auth-magic';
 
 const queryClient = new QueryClient();
 
 export default function RootLayout() {
-  // Handle deep links for Stripe checkout
+  const { setSession, setUser } = useUserStore();
+  
+  // Handle deep links for Stripe checkout and auth
   useEffect(() => {
-    const handleDeepLink = (event: { url: string }) => {
+    const handleDeepLink = async (event: { url: string }) => {
       console.log('🔗 Deep link received:', event.url);
       
-      // For now, use a mock userId - in production, get from auth
-      const userId = 'user_mock_id';
+      // Handle auth callback
+      if (event.url.includes('auth/callback')) {
+        try {
+          const { data } = await supabase.auth.getSessionFromUrl({ url: event.url });
+          if (data.session) {
+            setSession(data.session);
+            setUser(data.session.user);
+            
+            // Start trial for new users
+            if (data.session.user) {
+              await startTrial(data.session.user.id);
+            }
+          }
+        } catch (error) {
+          console.error('Auth callback error:', error);
+        }
+      }
       
       // Handle Stripe redirect
+      // For now, use a mock userId - in production, get from auth
+      const userId = 'user_mock_id';
       handleStripeRedirect(event.url, userId);
     };
     
@@ -36,7 +58,28 @@ export default function RootLayout() {
     return () => {
       subscription.remove();
     };
-  }, []);
+  }, [setSession, setUser]);
+  
+  // Listen to auth state changes
+  useEffect(() => {
+    const { data: authListener } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        console.log('🔐 Auth state changed:', event);
+        
+        setSession(session);
+        setUser(session?.user ?? null);
+        
+        if (event === 'SIGNED_IN' && session?.user) {
+          // Start trial for new users
+          await startTrial(session.user.id);
+        }
+      }
+    );
+    
+    return () => {
+      authListener?.subscription.unsubscribe();
+    };
+  }, [setSession, setUser]);
   
   return (
     <SafeAreaProvider>
@@ -110,6 +153,12 @@ export default function RootLayout() {
             }} 
           />
         </Stack>
+            
+            <AuthSheet 
+              visible={isAuthSheetVisible}
+              onClose={hideAuthSheet}
+            />
+          </AppErrorBoundary>
         </StripeProviderWrapper>
       </QueryClientProvider>
     </SafeAreaProvider>
