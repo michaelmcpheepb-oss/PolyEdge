@@ -63,14 +63,44 @@ export default function MarketDetailScreen() {
             <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
           </TouchableOpacity>
           <View style={styles.headerTitle}>
-            <Text style={styles.headerTitleText}>Loading...</Text>
+            <View style={skeletonStyles.titleSkeleton} />
           </View>
           <View style={styles.headerRight} />
         </View>
-        <ScrollView contentContainerStyle={styles.loadingContent}>
-          <SkeletonCard />
-          <SkeletonCard />
-          <SkeletonCard />
+
+        <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+          <View style={styles.content}>
+            {/* Chart area skeleton */}
+            <View style={skeletonStyles.chartSkeleton} />
+            
+            {/* Stats row skeleton */}
+            <View style={skeletonStyles.statsRow}>
+              <View style={skeletonStyles.statBox} />
+              <View style={skeletonStyles.statBox} />
+              <View style={skeletonStyles.statBox} />
+              <View style={skeletonStyles.statBox} />
+            </View>
+            
+            {/* Smart money section skeleton */}
+            <View style={skeletonStyles.sectionSkeleton}>
+              <View style={skeletonStyles.sectionTitleSkeleton} />
+              <View style={skeletonStyles.sectionContentSkeleton} />
+            </View>
+            
+            {/* Trades list skeleton */}
+            <View style={skeletonStyles.sectionSkeleton}>
+              <View style={skeletonStyles.sectionTitleSkeleton} />
+              {[1, 2, 3, 4, 5].map((i) => (
+                <View key={i} style={skeletonStyles.tradeRowSkeleton}>
+                  <View style={skeletonStyles.tradeAvatarSkeleton} />
+                  <View style={skeletonStyles.tradeInfoSkeleton}>
+                    <View style={skeletonStyles.tradeTitleSkeleton} />
+                    <View style={skeletonStyles.tradeSubtitleSkeleton} />
+                  </View>
+                </View>
+              ))}
+            </View>
+          </View>
         </ScrollView>
       </SafeAreaView>
     );
@@ -556,5 +586,74 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     color: Colors.accent,
+  },
+});
+
+const skeletonStyles = StyleSheet.create({
+  titleSkeleton: {
+    width: 120,
+    height: 24,
+    backgroundColor: '#2A2A45',
+    borderRadius: 4,
+  },
+  chartSkeleton: {
+    height: 200,
+    backgroundColor: '#2A2A45',
+    borderRadius: 12,
+    marginBottom: 24,
+  },
+  statsRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 32,
+  },
+  statBox: {
+    flex: 1,
+    height: 80,
+    backgroundColor: '#2A2A45',
+    borderRadius: 12,
+  },
+  sectionSkeleton: {
+    marginBottom: 32,
+  },
+  sectionTitleSkeleton: {
+    width: 100,
+    height: 20,
+    backgroundColor: '#2A2A45',
+    borderRadius: 4,
+    marginBottom: 16,
+  },
+  sectionContentSkeleton: {
+    height: 100,
+    backgroundColor: '#2A2A45',
+    borderRadius: 12,
+  },
+  tradeRowSkeleton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  tradeAvatarSkeleton: {
+    width: 40,
+    height: 40,
+    backgroundColor: '#2A2A45',
+    borderRadius: 20,
+    marginRight: 12,
+  },
+  tradeInfoSkeleton: {
+    flex: 1,
+  },
+  tradeTitleSkeleton: {
+    width: '70%',
+    height: 16,
+    backgroundColor: '#2A2A45',
+    borderRadius: 4,
+    marginBottom: 8,
+  },
+  tradeSubtitleSkeleton: {
+    width: '40%',
+    height: 12,
+    backgroundColor: '#2A2A45',
+    borderRadius: 4,
   },
 });
