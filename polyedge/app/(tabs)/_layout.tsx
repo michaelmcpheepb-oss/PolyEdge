@@ -24,13 +24,23 @@ export default function TabLayout() {
       }}
     >
       <Tabs.Screen
-        name="feed"
+        name="today"
         options={{
-          title: 'Feed',
+          title: 'Today',
           tabBarIcon: ({ size, color }) => (
             <Ionicons name="flame" size={size} color={color} />
           ),
-          headerTitle: 'PolyEdge',
+          headerTitle: 'Daily Picks',
+        }}
+      />
+      <Tabs.Screen
+        name="markets"
+        options={{
+          title: 'Markets',
+          tabBarIcon: ({ size, color }) => (
+            <Ionicons name="bar-chart" size={size} color={color} />
+          ),
+          headerTitle: 'Market Intelligence',
         }}
       />
       <Tabs.Screen
@@ -40,27 +50,17 @@ export default function TabLayout() {
           tabBarIcon: ({ size, color }) => (
             <Ionicons name="fish" size={size} color={color} />
           ),
-          headerTitle: 'Whale Feed',
+          headerTitle: 'Smart Money',
         }}
       />
       <Tabs.Screen
-        name="alerts"
+        name="profile"
         options={{
-          title: 'Alerts',
+          title: 'Profile',
           tabBarIcon: ({ size, color }) => (
-            <Ionicons name="notifications" size={size} color={color} />
+            <Ionicons name="person" size={size} color={color} />
           ),
-          headerTitle: 'My Alerts',
-        }}
-      />
-      <Tabs.Screen
-        name="leaderboard"
-        options={{
-          title: 'Leaderboard',
-          tabBarIcon: ({ size, color }) => (
-            <Ionicons name="trophy" size={size} color={color} />
-          ),
-          headerTitle: 'Top Traders',
+          headerTitle: 'My Profile',
         }}
       />
     </Tabs>
