@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PolyEdge Screenshot</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+        }
+        
+        body {
+            background-color: #0D0D1A;
+            color: #FFFFFF;
+            width: 1080px;
+            height: 1920px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .container {
+            width: 100%;
+            height: 100%;
+            padding: 60px 40px 40px;
+        }
+        
+        .status-bar {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 60px;
+            background-color: #0D0D1A;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 40px;
+            border-bottom: 1px solid #2A2A45;
+        }
+        
+        .status-time {
+            font-weight: 600;
+            font-size: 18px;
+        }
+        
+        .status-icons {
+            display: flex;
+            gap: 12px;
+            color: #A0A0B8;
+        }
+        
+        .nav-bar {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 80px;
+            background-color: #0D0D1A;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            border-top: 1px solid #2A2A45;
+        }
+        
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            color: #A0A0B8;
+            font-size: 12px;
+        }
+        
+        .nav-item.active {
+            color: #00D4AA;
+        }
+        
+        .nav-icon {
+            font-size: 24px;
+            font-weight: bold;
+        }
+        
+        .accent {
+            color: #00D4AA;
+        }
+        
+        .surface {
+            background-color: #1A1A2E;
+            border-radius: 16px;
+            border: 1px solid #2A2A45;
+        }
+        
+        .card {
+            background-color: #1A1A2E;
+            border-radius: 16px;
+            border: 1px solid #2A2A45;
+            padding: 20px;
+        }
+        
+        .yes {
+            color: #27AE60;
+        }
+        
+        .no {
+            color: #E74C3C;
+        }
+    </style>
+</head>
+<body>
+    <div class="status-bar">
+        <div class="status-time">5:41 PM</div>
+        <div class="status-icons">
+            <span>📶</span>
+            <span>🔋</span>
+            <span>📡</span>
+        </div>
+    </div>
+    
+    <div class="container">
+        <!-- Content will go here -->
+    </div>
+    
+    <div class="nav-bar">
+        <div class="nav-item active">
+            <div class="nav-icon">📈</div>
+            <div>Feed</div>
+        </div>
+        <div class="nav-item">
+            <div class="nav-icon">🐋</div>
+            <div>Whales</div>
+        </div>
+        <div class="nav-item">
+            <div class="nav-icon">🏆</div>
+            <div>Leaderboard</div>
+        </div>
+        <div class="nav-item">
+            <div class="nav-icon">🔔</div>
+            <div>Alerts</div>
+        </div>
+        <div class="nav-item">
+            <div class="nav-icon">👤</div>
+            <div>Profile</div>
+        </div>
+    </div>
+</body>
+</html>

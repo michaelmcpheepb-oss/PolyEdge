@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PolyEdge - Whale Feed</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+        }
+        
+        body {
+            background-color: #0D0D1A;
+            color: #FFFFFF;
+            width: 1080px;
+            height: 1920px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .container {
+            width: 100%;
+            height: 100%;
+            padding: 80px 40px 100px;
+        }
+        
+        .status-bar {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 60px;
+            background-color: #0D0D1A;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 40px;
+            border-bottom: 1px solid #2A2A45;
+        }
+        
+        .status-time {
+            font-weight: 600;
+            font-size: 18px;
+        }
+        
+        .status-icons {
+            display: flex;
+            gap: 12px;
+            color: #A0A0B8;
+        }
+        
+        .nav-bar {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 80px;
+            background-color: #0D0D1A;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            border-top: 1px solid #2A2A45;
+        }
+        
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            color: #A0A0B8;
+            font-size: 12px;
+        }
+        
+        .nav-item.active {
+            color: #00D4AA;
+        }
+        
+        .nav-icon {
+            font-size: 24px;
+            font-weight: bold;
+        }
+        
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+        
+        .screen-title {
+            font-size: 32px;
+            font-weight: 800;
+            color: #FFFFFF;
+        }
+        
+        .screen-subtitle {
+            font-size: 18px;
+            color: #A0A0B8;
+            margin-top: 5px;
+        }
+        
+        .filter-tabs {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 30px;
+        }
+        
+        .filter-tab {
+            padding: 12px 24px;
+            background-color: #1A1A2E;
+            border: 1px solid #2A2A45;
+            border-radius: 25px;
+            color: #A0A0B8;
+            font-size: 16px;
+        }
+        
+        .filter-tab.active {
+            background-color: #00D4AA;
+            color: #0D0D1A;
+            border-color: #00D4AA;
+        }
+        
+        .whale-card {
+            background-color: #1A1A2E;
+            border-radius: 20px;
+            border: 1px solid #2A2A45;
+            padding: 25px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+        
+        .whale-avatar {
+            width: 70px;
+            height: 70px;
+            background: linear-gradient(135deg, #00D4AA, #009B7D);
+            border-radius: 35px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 28px;
+            position: relative;
+        }
+        
+        .online-indicator {
+            position: absolute;
+            bottom: 5px;
+            right: 5px;
+            width: 15px;
+            height: 15px;
+            background-color: #27AE60;
+            border: 2px solid #1A1A2E;
+            border-radius: 50%;
+        }
+        
+        .whale-info {
+            flex: 1;
+        }
+        
+        .whale-name {
+            font-size: 22px;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+        
+        .whale-wallet {
+            font-size: 16px;
+            color: #A0A0B8;
+            font-family: monospace;
+            margin-bottom: 10px;
+        }
+        
+        .trade-info {
+            display: flex;
+            gap: 25px;
+        }
+        
+        .trade-detail {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .trade-amount {
+            font-size: 20px;
+            font-weight: 700;
+            color: #00D4AA;
+        }
+        
+        .trade-label {
+            font-size: 14px;
+            color: #A0A0B8;
+            margin-top: 3px;
+        }
+        
+        .trade-market {
+            font-size: 18px;
+            font-weight: 500;
+            margin-top: 8px;
+            line-height: 1.3;
+        }
+        
+        .trade-direction {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 600;
+            margin-left: 10px;
+        }
+        
+        .trade-yes {
+            background-color: rgba(39, 174, 96, 0.2);
+            color: #27AE60;
+        }
+        
+        .trade-no {
+            background-color: rgba(231, 76, 60, 0.2);
+            color: #E74C3C;
+        }
+        
+        .pro-badge {
+            background-color: rgba(0, 212, 170, 0.2);
+            color: #00D4AA;
+            padding: 6px 12px;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 600;
+            display: inline-block;
+            margin-left: 10px;
+        }
+        
+        .accent {
+            color: #00D4AA;
+        }
+        
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .section-title {
+            font-size: 24px;
+            font-weight: 700;
+        }
+        
+        .see-all {
+            color: #00D4AA;
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+    <div class="status-bar">
+        <div class="status-time">5:41 PM</div>
+        <div class="status-icons">
+            <span>📶</span>
+            <span>🔋</span>
+            <span>📡</span>
+        </div>
+    </div>
+    
+    <div class="container">
+        <div class="header">
+            <div>
+                <div class="screen-title">Whale Watch</div>
+                <div class="screen-subtitle">Track large trades in real-time</div>
+            </div>
+            <div class="pro-badge">PRO</div>
+        </div>
+        
+        <div class="filter-tabs">
+            <div class="filter-tab active">All Whales</div>
+            <div class="filter-tab">$10K+</div>
+            <div class="filter-tab">$50K+</div>
+            <div class="filter-tab">$100K+</div>
+        </div>
+        
+        <div class="section-header">
+            <div class="section-title">Recent Whale Trades</div>
+            <div class="see-all">See All →</div>
+        </div>
+        
+        <div class="whale-card">
+            <div class="whale-avatar">
+                🐋
+                <div class="online-indicator"></div>
+            </div>
+            <div class="whale-info">
+                <div class="whale-name">CryptoWhale42</div>
+                <div class="whale-wallet">0x8f3...c7d2</div>
+                <div class="trade-info">
+                    <div class="trade-detail">
+                        <div class="trade-amount">$124,500</div>
+                        <div class="trade-label">Trade Size</div>
+                    </div>
+                    <div class="trade-detail">
+                        <div class="trade-amount">42</div>
+                        <div class="trade-label">Trades Today</div>
+                    </div>
+                </div>
+                <div class="trade-market">
+                    "Will Bitcoin reach $100K before 2025?"
+                    <span class="trade-direction trade-yes">YES</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="whale-card">
+            <div class="whale-avatar">
+                🦈
+            </div>
+            <div class="whale-info">
+                <div class="whale-name">PoliticalOracle</div>
+                <div class="whale-wallet">0x5a9...e8b1</div>
+                <div class="trade-info">
+                    <div class="trade-detail">
+                        <div class="trade-amount">$87,300</div>
+                        <div class="trade-label">Trade Size</div>
+                    </div>
+                    <div class="trade-detail">
+                        <div class="trade-amount">18</div>
+                        <div class="trade-label">Trades Today</div>
+                    </div>
+                </div>
+                <div class="trade-market">
+                    "2024 US Election: Trump vs Harris"
+                    <span class="trade-direction trade-no">NO</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="whale-card">
+            <div class="whale-avatar">
+                🐬
+            </div>
+            <div class="whale-info">
+                <div class="whale-name">SportsAnalyst</div>
+                <div class="whale-wallet">0x3b2...f9c4</div>
+                <div class="trade-info">
+                    <div class="trade-detail">
+                        <div class="trade-amount">$52,100</div>
+                        <div class="trade-label">Trade Size</div>
+                    </div>
+                    <div class="trade-detail">
+                        <div class="trade-amount">9</div>
+                        <div class="trade-label">Trades Today</div>
+                    </div>
+                </div>
+                <div class="trade-market">
+                    "NBA Finals: Lakers vs Celtics"
+                    <span class="trade-direction trade-yes">YES</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="section-header" style="margin-top: 40px;">
+            <div class="section-title">Top Whales This Week</div>
+            <div class="see-all">See All →</div>
+        </div>
+        
+        <div class="whale-card">
+            <div class="whale-avatar">
+                🐳
+            </div>
+            <div class="whale-info">
+                <div class="whale-name">MarketMakerX</div>
+                <div class="whale-wallet">0x9f1...a5d3</div>
+                <div class="trade-info">
+                    <div class="trade-detail">
+                        <div class="trade-amount">$2.4M</div>
+                        <div class="trade-label">Weekly Volume</div>
+                    </div>
+                    <div class="trade-detail">
+                        <div class="trade-amount">+$342K</div>
+                        <div class="trade-label">Weekly PnL</div>
+                    </div>
+                </div>
+                <div class="trade-market">
+                    Top performer across 12 markets
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="nav-bar">
+        <div class="nav-item">
+            <div class="nav-icon">📈</div>
+            <div>Feed</div>
+        </div>
+        <div class="nav-item active">
+            <div class="nav-icon">🐋</div>
+            <div>Whales</div>
+        </div>
+        <div class="nav-item">
+            <div class="nav-icon">🏆</div>
+            <div>Leaderboard</div>
+        </div>
+        <div class="nav-item">
+            <div class="nav-icon">🔔</div>
+            <div>Alerts</div>
+        </div>
+        <div class="nav-item">
+            <div class="nav-icon">👤</div>
+            <div>Profile</div>
+        </div>
+    </div>
+</body>
+</html>

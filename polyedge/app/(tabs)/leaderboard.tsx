@@ -4,7 +4,6 @@ import { Colors } from '../../constants/Colors';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState } from 'react';
 import { TraderCard } from '../../components/TraderCard';
-import { SkeletonCard } from '../../components/SkeletonCard';
 
 export default function LeaderboardScreen() {
   const [activeTab, setActiveTab] = useState<'top' | 'following'>('top');

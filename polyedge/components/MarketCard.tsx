@@ -1,10 +1,20 @@
 import React, { useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native';
-import { Market } from '../types';
-import { Colors } from '../constants/Colors';
-import { formatDistanceToNow } from 'date-fns';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
+import { Market } from '../types';
+import { Colors } from '../constants/Colors';
+
+// Lightweight time-ago helper (no date-fns dependency)
+const timeAgo = (date: Date): string => {
+  const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
+  if (seconds < 5) return 'just now';
+  if (seconds < 60) return `${seconds}s ago`;
+  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
+  if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
+  const days = Math.floor(seconds / 86400);
+  return days === 1 ? '1 day ago' : `${days} days ago`;
+};
 
 interface MarketCardProps {
   market: Market;
@@ -153,7 +163,7 @@ function MarketCardComponent({ market, compact = false }: MarketCardProps) {
               Total volume: {formatCurrency(market.total_volume)}
             </Text>
             <Text style={styles.updated}>
-              Updated {formatDistanceToNow(new Date(market.updated_at), { addSuffix: true })}
+              Updated {timeAgo(new Date(market.updated_at))}
             </Text>
           </View>
         )}

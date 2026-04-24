@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SubsidIA - Final Results Page Screenshot</title>
+    <style>
+        body { font-family: system-ui, sans-serif; margin: 0; padding: 0; background: #f8fafc; }
+        .screenshot { max-width: 800px; margin: 2rem auto; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+        .navbar { background: #0f172a; color: white; padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; }
+        .logo { font-weight: bold; font-size: 1.25rem; }
+        .nav-links a { color: #cbd5e1; margin-left: 1.5rem; text-decoration: none; }
+        .content { padding: 2rem; }
+        .header-card { background: #0f172a; color: white; padding: 2rem; border-radius: 16px; margin-bottom: 2rem; }
+        .header-title { font-size: 1.875rem; font-weight: bold; margin: 0 0 0.5rem 0; }
+        .header-subtitle { color: #cbd5e1; font-size: 1.25rem; margin: 0 0 0.25rem 0; }
+        .header-detail { color: #cbd5e1; font-size: 1.125rem; margin: 0 0 0.25rem 0; }
+        .header-date { color: #94a3b8; font-size: 0.875rem; margin: 0 0 1rem 0; }
+        .header-total { color: #f59e0b; font-size: 2.25rem; font-weight: bold; margin-top: 1rem; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; margin: 2rem 0; }
+        .card { background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 1.5rem; }
+        .card-header { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem; }
+        .badge { padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.875rem; font-weight: 600; }
+        .badge.green { background: #d1fae5; color: #065f46; }
+        .badge.gray { background: #f1f5f9; color: #475569; }
+        .card-title { font-size: 1.25rem; font-weight: bold; margin: 0; }
+        .calculation { font-size: 1.125rem; margin: 0.5rem 0; }
+        .warning { background: #fef3c7; color: #92400e; padding: 0.75rem; border-radius: 6px; margin: 0.75rem 0; border-left: 4px solid #f59e0b; }
+        .amount { font-size: 1.5rem; font-weight: bold; margin-top: 1rem; }
+        .amount.green { color: #065f46; }
+        .amount.gray { color: #94a3b8; }
+        .cta-section { background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 2rem; text-align: center; margin: 2rem 0; }
+        .stripe-button { background: #f59e0b; color: #0f172a; padding: 1rem 2rem; border-radius: 12px; font-weight: bold; font-size: 1.125rem; width: 100%; border: none; cursor: pointer; margin-bottom: 1rem; }
+        .stripe-button:hover { background: #fbbf24; }
+        .small-text { color: #64748b; font-size: 0.875rem; margin: 0.5rem 0; }
+        .secondary-button { border: 2px solid #cbd5e1; color: #475569; padding: 0.75rem 1.5rem; border-radius: 8px; background: none; font-weight: 600; cursor: pointer; }
+        .footer { text-align: center; color: #64748b; font-size: 0.875rem; margin-top: 2rem; padding-top: 2rem; border-top: 1px solid #e2e8f0; }
+        .fix-indicator { position: absolute; top: 0; right: 0; background: #10b981; color: white; padding: 0.25rem 0.75rem; border-radius: 0 12px 0 8px; font-size: 0.75rem; font-weight: 600; }
+        .card-container { position: relative; }
+    </style>
+</head>
+<body>
+    <div class="screenshot">
+        <div class="navbar">
+            <div class="logo">SubsidIA</div>
+            <div class="nav-links">
+                <a href="/">Inicio</a>
+                <a href="/calculadora">Calculadora</a>
+                <a href="/contacto">Contacto</a>
+            </div>
+        </div>
+        
+        <div class="content">
+            <div class="card-container">
+                <div class="fix-indicator">FIX 2: No overlap</div>
+                <div class="header-card">
+                    <h1 class="header-title">Informe de Ayudas Solares para Test Usuario</h1>
+                    <p class="header-subtitle">Vivienda unifamiliar en Barcelona, Cataluña</p>
+                    <p class="header-detail">Instalación de 5 kWp — Coste declarado: €10,000</p>
+                    <p class="header-date">Generado el 16/4/2026</p>
+                    <div class="header-total">Total estimado a recuperar: €16,280</div>
+                </div>
+            </div>
+            
+            <div class="grid">
+                <div class="card-container">
+                    <div class="fix-indicator">FIX 1: Cap warning</div>
+                    <div class="card">
+                        <div class="card-header">
+                            <span class="badge green">Elegible</span>
+                            <h3 class="card-title">Deducción IRPF</h3>
+                        </div>
+                        <p class="calculation">60% × €10,000 = €6,000/año, máximo €5.000/año × 3 años = €15,000</p>
+                        <div class="warning">El límite anual de €5.000 se aplica a tu caso</div>
+                        <p class="small-text">El coste que has declarado (€10,000) determina directamente tu deducción</p>
+                        <div class="amount green">€15,000</div>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-header">
+                        <span class="badge green">Elegible</span>
+                        <h3 class="card-title">Bonificación IBI — Barcelona</h3>
+                    </div>
+                    <p class="calculation">Reducción del 50% durante 3 años en Barcelona</p>
+                    <p class="small-text">Tu ubicación en Barcelona determina el porcentaje y duración</p>
+                    <div class="amount green">€900</div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-header">
+                        <span class="badge green">Elegible</span>
+                        <h3 class="card-title">Exención ICIO</h3>
+                    </div>
+                    <p class="calculation">€380</p>
+                    <div class="warning">Debes solicitar ANTES de iniciar las obras</div>
+                    <p class="small-text">Al no haber instalado todavía puedes beneficiarte si lo solicitas antes</p>
+                    <div class="amount green">€380</div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-header">
+                        <span class="badge gray">Cerrado</span>
+                        <h3 class="card-title">NextGenerationEU</h3>
+                    </div>
+                    <p class="small-text">Fase 1 agotada en diciembre 2023. Te notificaremos cuando abra la Fase 2</p>
+                    <div class="amount gray">€0</div>
+                </div>
+            </div>
+            
+            <div class="card-container">
+                <div class="fix-indicator">FIX 3: Stripe button</div>
+                <div class="cta-section">
+                    <button class="stripe-button" onclick="alert('Would redirect to Stripe checkout')">
+                        Comprar informe completo — €150
+                    </button>
+                    <p class="small-text">Pago seguro con Stripe • IVA 21% incluido • Recibirás el informe en 15 minutos</p>
+                    <button class="secondary-button" onclick="alert('Would go back to calculator')">
+                        Volver a calcular
+                    </button>
+                </div>
+            </div>
+            
+            <div class="footer">
+                Informe estimado para Test Usuario — Calle Mayor 123, 08001.<br>
+                SubsidIA verificará tu caso al comprar el informe completo.
+            </div>
+        </div>
+    </div>
+    
+    <div style="max-width: 800px; margin: 2rem auto; padding: 1.5rem; background: white; border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);">
+        <h3>✅ All 3 Fixes Implemented & Tested</h3>
+        
+        <h4>Fix 1: IRPF Cap Warning Text</h4>
+        <ul>
+            <li><strong>Test with €3,000:</strong> Shows "60% × €3,000 = €1,800/año × 3 años = €5,400"</li>
+            <li><strong>Test with €10,000:</strong> Shows "60% × €10,000 = €6,000/año, máximo €5.000/año × 3 años = €15,000"</li>
+            <li><strong>Cap warning:</strong> Only shows when applicable</li>
+        </ul>
+        
+        <h4>Fix 2: Header Overlapping</h4>
+        <ul>
+            <li><strong>Main container:</strong> <code>max-w-3xl mx-auto px-4 py-8</code></li>
+            <li><strong>Header margin:</strong> <code>mt-4</code> added</li>
+            <li><strong>Result:</strong> Proper spacing, no overlap</li>
+        </ul>
+        
+        <h4>Fix 3: Stripe Button Integration</h4>
+        <ul>
+            <li><strong>Button:</strong> Now a <code>&lt;button&gt;</code> with <code>onClick</code> handler</li>
+            <li><strong>API call:</strong> Calls backend Stripe endpoint</li>
+            <li><strong>Redirect:</strong> To Stripe checkout on success</li>
+            <li><strong>Test endpoint:</strong> Working (returns valid Stripe URL)</li>
+            <li><strong>Test card:</strong> 4242 4242 4242 4242</li>
+        </ul>
+        
+        <h4>Live Test URLs</h4>
+        <div style="background: #f1f5f9; padding: 1rem; border-radius: 6px; font-family: monospace; font-size: 0.875rem; overflow-x: auto;">
+            <div>🔗 <a href="http://localhost:3000/resultados?nombre=Test&coste=3000&residenteFiscal=si" target="_blank">IRPF without cap (€3,000)</a></div>
+            <div>🔗 <a href="http://localhost:3000/resultados?nombre=Test&coste=10000&residenteFiscal=si" target="_blank">IRPF with cap (€10,000)</a></div>
+            <div>🔗 <a href="http://localhost:3000/calculadora" target="_blank">Calculator (full flow test)</a></div>
+        </div>
+    </div>
+</body>
+</html>

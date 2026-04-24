@@ -5,7 +5,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { WhaleTradeRow } from '../../components/WhaleTradeRow';
-import { SkeletonCard } from '../../components/SkeletonCard';
 
 export default function TraderProfileScreen() {
   const { wallet } = useLocalSearchParams<{ wallet: string }>();

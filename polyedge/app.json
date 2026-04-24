@@ -28,24 +28,45 @@
         {
           "action": "VIEW",
           "autoVerify": true,
-          "data": [{ "scheme": "polyedge" }],
-          "category": ["BROWSABLE", "DEFAULT"]
+          "data": [
+            {
+              "scheme": "polyedge"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
         }
       ]
     },
     "plugins": [
       "expo-router",
       "expo-notifications",
-      ["expo-splash-screen", {"backgroundColor": "#0D0D1A"}],
-      ["@stripe/stripe-react-native", {
-        "merchantIdentifier": "merchant.com.polyedge",
-        "enableGooglePay": false
-      }]
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#0D0D1A",
+          "image": "./assets/splash.png",
+          "imageWidth": 200,
+          "resizeMode": "contain"
+        }
+      ],
+      [
+        "@stripe/stripe-react-native",
+        {
+          "merchantIdentifier": "merchant.com.polyedge",
+          "enableGooglePay": false
+        }
+      ]
     ],
     "scheme": "polyedge",
-    "owner": "michaelmcpheepb-oss",
     "extra": {
-      "eas": { "projectId": "[RUN npx eas init TO GET THIS]" }
-    }
+      "eas": {
+        "projectId": "33dd447d-b339-4874-84b7-73b764e5920d"
+      },
+      "router": {}
+    },
+    "owner": "mcphee"
   }
 }

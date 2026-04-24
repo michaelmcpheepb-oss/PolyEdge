@@ -2,7 +2,16 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { WhaleTrade } from '../types';
 import { Colors } from '../constants/Colors';
-import { formatDistanceToNow } from 'date-fns';
+// Lightweight time-ago helper (replaces date-fns)
+const timeAgo = (date: Date): string => {
+  const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
+  if (seconds < 5) return 'just now';
+  if (seconds < 60) return `${seconds}s ago`;
+  if (seconds < 3600) return `${Math.floor(seconds/60)}m ago`;
+  if (seconds < 86400) return `${Math.floor(seconds/3600)}h ago`;
+  const days = Math.floor(seconds/86400);
+  return days === 1 ? '1 day ago' : `${days} days ago`;
+};
 
 interface WhaleTradeRowProps {
   trade: WhaleTrade;
@@ -43,7 +52,7 @@ export function WhaleTradeRow({ trade, onPress }: WhaleTradeRowProps) {
 
   const formatTimeAgo = (timestamp: string) => {
     try {
-      return formatDistanceToNow(new Date(timestamp), { addSuffix: true });
+      return timeAgo(new Date(timestamp));
     } catch (error) {
       return 'Unknown time';
     }

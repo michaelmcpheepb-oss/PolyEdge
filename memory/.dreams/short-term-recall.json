@@ -1,0 +1,169 @@
+{
+  "version": 1,
+  "updatedAt": "2026-04-22T13:15:58.097Z",
+  "entries": {
+    "memory:memory/2026-04-14.md:1:42": {
+      "key": "memory:memory/2026-04-14.md:1:42",
+      "path": "memory/2026-04-14.md",
+      "startLine": 1,
+      "endLine": 42,
+      "source": "memory",
+      "snippet": "# Tuesday, April 14th, 2026 ## Morning Session (8:20 AM - 1:44 PM) ### ✅ COMPLETED: gog Configuration **Status:** FULLY COMPLETE AND VERIFIED **What was done:** 1. **Google OAuth Client Created** - New client with external access (not org-restricted) - Client ID: `552945775508-rd4oe3fjsfp57huqr8rs9g2gdp7k18nf.apps.googleusercontent.com` - Project: `project-4d870ef5-fdbb-4f3f-a81` - Saved to: `~/.config/gog/client_secret.json` 2. **Test User Configured** - Added `mike.mcpheee@gmail.com` as authorized test user in Google Cloud Console 3. **OAuth Authorization Completed** - Successfully granted permissions for: - Gmail (full access) - Calendar - Drive - Contacts -",
+      "recallCount": 3,
+      "dailyCount": 0,
+      "groundedCount": 0,
+      "totalScore": 1.609473367364998,
+      "maxScore": 0.6408911645306992,
+      "firstRecalledAt": "2026-04-14T17:55:28.130Z",
+      "lastRecalledAt": "2026-04-21T09:18:33.779Z",
+      "queryHashes": [
+        "5953196346b9",
+        "230934a5e1f3",
+        "5fda1bd2b5c3"
+      ],
+      "recallDays": [
+        "2026-04-14",
+        "2026-04-20",
+        "2026-04-21"
+      ],
+      "conceptTags": [
+        "org-restricted",
+        "project-4d870ef5-fdbb-4f3f-a81",
+        "config/gog/client-secret.json",
+        "mike.mcpheee",
+        "gmail.com",
+        "tuesday",
+        "april",
+        "14th"
+      ]
+    },
+    "memory:memory/2026-04-14.md:34:74": {
+      "key": "memory:memory/2026-04-14.md:34:74",
+      "path": "memory/2026-04-14.md",
+      "startLine": 34,
+      "endLine": 74,
+      "source": "memory",
+      "snippet": "- gog needs `GOG_KEYRING_PASSWORD` environment variable for token storage in headless environments - Use `GOG_ACCOUNT` env var or `--account` flag to specify which Google account to use ### 🔄 Open Loops Status Update **Previously incomplete (from yesterday):** - ~~gog Configuration~~ → **✅ NOW COMPLETE** **Still incomplete:** - SubsidIA Development Environment (project structure, git repo, coding workspace) - Month 1 Goal Planning (concrete steps for 3 paying clients) - OpenClaw Skill Configuration (remaining API setups) ### 🎯 Next Priorities 1. **Set up SubsidIA development environment** - Project structure, git initialization, documentation 2. **Plan Month 1 validation** - Exact steps",
+      "recallCount": 3,
+      "dailyCount": 0,
+      "groundedCount": 0,
+      "totalScore": 1.5191087443628595,
+      "maxScore": 0.6156360092458644,
+      "firstRecalledAt": "2026-04-14T17:55:28.130Z",
+      "lastRecalledAt": "2026-04-21T09:18:33.779Z",
+      "queryHashes": [
+        "5953196346b9",
+        "230934a5e1f3",
+        "5fda1bd2b5c3"
+      ],
+      "recallDays": [
+        "2026-04-14",
+        "2026-04-20",
+        "2026-04-21"
+      ],
+      "conceptTags": [
+        "gog-keyring-password",
+        "gog-account",
+        "gog",
+        "needs",
+        "environment",
+        "variable",
+        "token",
+        "storage"
+      ]
+    },
+    "memory:memory/2026-04-14.md:435:469": {
+      "key": "memory:memory/2026-04-14.md:435:469",
+      "path": "memory/2026-04-14.md",
+      "startLine": 435,
+      "endLine": 469,
+      "source": "memory",
+      "snippet": "### **Next Steps (Tomorrow):** 1. **Production deployment** to Vercel + Supabase 2. **Month 1 validation** - Secure 3 paying clients for manual reports 3. **Phase 2 development** - Eligibility engine with advanced calculations 4. **Google Workspace automation** - Connect business workflows ### **Status:** ✅ **PRODUCTION-READY** - **Frontend:** Live at http://localhost:3000 - **Backend:** Ready for Supabase integration - **Database:** Schema optimized for subsidy calculations - **Design:** Fintech-grade quality achieved - **Branding:** Professional logo and typography - **Accessibility:** Proper contrast ratios throughout **Ready for:** Launch and Month 1 validation before NextGenEU funds d",
+      "recallCount": 1,
+      "dailyCount": 0,
+      "groundedCount": 0,
+      "totalScore": 0.36497222185134887,
+      "maxScore": 0.36497222185134887,
+      "firstRecalledAt": "2026-04-22T13:15:58.097Z",
+      "lastRecalledAt": "2026-04-22T13:15:58.097Z",
+      "queryHashes": [
+        "d6fe37e2e1ff"
+      ],
+      "recallDays": [
+        "2026-04-22"
+      ],
+      "conceptTags": [
+        "production-ready",
+        "fintech-grade",
+        "steps",
+        "tomorrow",
+        "production",
+        "deployment",
+        "vercel",
+        "supabase"
+      ]
+    },
+    "memory:memory/2026-04-15.md:566:594": {
+      "key": "memory:memory/2026-04-15.md:566:594",
+      "path": "memory/2026-04-15.md",
+      "startLine": 566,
+      "endLine": 594,
+      "source": "memory",
+      "snippet": "- Validation functioning correctly 2. **Backend test:** http://localhost:3001/api/calculate/test - Returns €17,258 total subsidies for Madrid sample - Calculation engine operational 3. **Health check:** http://localhost:3001/api/health - Returns {\"status\":\"healthy\"} ### **✅ STABILITY MEASURES IMPLEMENTED:** 1. **Process monitoring** - Both servers confirmed running 2. **Error handling** - Compilation issues resolved 3. **Resource management** - Port conflicts eliminated (3000 only) 4. **Backup readiness** - GitHub restore points available ### **🎯 CURRENT STATUS:** **The SubsidIA platform is now fully operational with:** - ✅ Frontend running at http://localhost:3000 - ✅ Bac",
+      "recallCount": 1,
+      "dailyCount": 0,
+      "groundedCount": 0,
+      "totalScore": 0.3604554295539856,
+      "maxScore": 0.3604554295539856,
+      "firstRecalledAt": "2026-04-22T13:15:58.097Z",
+      "lastRecalledAt": "2026-04-22T13:15:58.097Z",
+      "queryHashes": [
+        "d6fe37e2e1ff"
+      ],
+      "recallDays": [
+        "2026-04-22"
+      ],
+      "conceptTags": [
+        "backup",
+        "3001/api/calculate/test",
+        "3001/api/health",
+        "validation",
+        "functioning",
+        "correctly",
+        "backend",
+        "test"
+      ]
+    },
+    "memory:memory/2026-04-13.md:1:30": {
+      "key": "memory:memory/2026-04-13.md:1:30",
+      "path": "memory/2026-04-13.md",
+      "startLine": 1,
+      "endLine": 30,
+      "source": "memory",
+      "snippet": "# 2026-04-13 — SubsidIA Launch Day ## 🚀 Mission Established - **I am Kaizen**, the technical co-founder and operational backbone of SubsidIA - **Mike** is the commercial engine — we're a two-person startup in Barcelona - **3-month launch window** — NextGenEU funds are depleting, urgency is real ## 📊 The Problem Spanish solar installers/homeowners miss €7,000+ per installation in unclaimed subsidies due to complexity across 6 incentive layers: 1. European NextGeneration direct grants 2. National IRPF income tax deduction (up to 60% of installation cost) 3. IBI property tax reductions (municipal) 4. ICIO construction tax exemptions 5. Battery storage subsidies 6. Municipal bonus programs",
+      "recallCount": 1,
+      "dailyCount": 0,
+      "groundedCount": 0,
+      "totalScore": 0.36024393439292907,
+      "maxScore": 0.36024393439292907,
+      "firstRecalledAt": "2026-04-22T13:15:58.097Z",
+      "lastRecalledAt": "2026-04-22T13:15:58.097Z",
+      "queryHashes": [
+        "d6fe37e2e1ff"
+      ],
+      "recallDays": [
+        "2026-04-22"
+      ],
+      "conceptTags": [
+        "co-founder",
+        "two-person",
+        "3-month",
+        "installers/homeowners",
+        "subsidia",
+        "launch",
+        "day",
+        "mission"
+      ]
+    }
+  }
+}

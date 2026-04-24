@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "skills": {
+    "nano-pdf": {
+      "version": "1.0.0",
+      "installedAt": 1776105074517
+    },
+    "frontend": {
+      "version": "1.0.2",
+      "installedAt": 1776181405471
+    },
+    "nextjs": {
+      "version": "1.1.0",
+      "installedAt": 1776181424327
+    },
+    "web-browsing": {
+      "version": "1.0.0",
+      "installedAt": 1776181933340
+    }
+  }
+}
