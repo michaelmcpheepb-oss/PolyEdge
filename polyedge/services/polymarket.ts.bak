@@ -213,8 +213,8 @@ export async function getWhaleTrades(options?: {
     const tradesData = await response.json();
     console.log(`📊 Got ${tradesData.length} trades from Polymarket API`);
     
-    // Filter for whale trades (minAmount default 1000)
-    const minAmount = options?.minAmount || 1000;
+    // Filter for whale trades (minAmount default 10000)
+    const minAmount = options?.minAmount || 10000;
     const whaleTrades: WhaleTrade[] = [];
     
     for (const trade of tradesData) {
@@ -297,10 +297,6 @@ export async function getWhaleTrades(options?: {
       }
     }
     
-    // If API succeeded but returned nothing, use demo data
-    if (filteredTrades.length === 0) {
-      return getDemoWhaleTrades(options?.minAmount ?? 1000, options?.limit ?? 100);
-    }
     return filteredTrades;
   } catch (error) {
     console.error('💥 Error in getWhaleTrades:', error);
@@ -352,40 +348,12 @@ export async function getWhaleTrades(options?: {
         throw new Error('All data sources failed');
       }
       
-      if (data && data.length > 0) return data;
-      // Both failed or empty — return demo trades
-      return getDemoWhaleTrades(options?.minAmount ?? 1000, options?.limit ?? 100);
+      return data || [];
     } catch (fallbackError) {
       console.error('💥 Complete failure:', fallbackError);
-      return getDemoWhaleTrades(options?.minAmount ?? 1000, options?.limit ?? 100);
+      throw new Error('Failed to fetch whale trades from any source');
     }
   }
-}
-
-/** Static demo whale trades shown when API and Supabase both return empty. */
-export const DEMO_WHALE_IDS = new Set([
-  'demo-1','demo-2','demo-3','demo-4','demo-5',
-  'demo-6','demo-7','demo-8','demo-9','demo-10',
-  'demo-11','demo-12',
-]);
-
-function getDemoWhaleTrades(minAmount: number, limit: number): WhaleTrade[] {
-  const now = Date.now();
-  const raw: WhaleTrade[] = [
-    { id:'demo-1',  market_id:'btc-150k-2026',   market_question:'Will Bitcoin reach $150K in 2026?',             trader_address:'0x1a2b3c4d', trader_pseudonym:'Whale #4d',  amount_usd:45000, outcome:'YES', side:'BUY',  timestamp:new Date(now-1*3600000).toISOString(), created_at:new Date().toISOString() },
-    { id:'demo-2',  market_id:'fed-cut-2026',     market_question:'Will the Fed cut rates before Q3 2026?',        trader_address:'0x2b3c4d5e', trader_pseudonym:'Whale #5e',  amount_usd:22000, outcome:'YES', side:'BUY',  timestamp:new Date(now-2*3600000).toISOString(), created_at:new Date().toISOString() },
-    { id:'demo-3',  market_id:'eth-etf-2026',     market_question:'Will Ethereum ETF see net inflows in Q2 2026?', trader_address:'0x3c4d5e6f', trader_pseudonym:'Whale #6f',  amount_usd:78000, outcome:'YES', side:'BUY',  timestamp:new Date(now-3*3600000).toISOString(), created_at:new Date().toISOString() },
-    { id:'demo-4',  market_id:'sol-etf-2026',     market_question:'Will SEC approve spot Solana ETF by Q3 2026?',  trader_address:'0x4d5e6f7a', trader_pseudonym:'Whale #7a',  amount_usd:31000, outcome:'NO',  side:'BUY',  timestamp:new Date(now-4*3600000).toISOString(), created_at:new Date().toISOString() },
-    { id:'demo-5',  market_id:'gpt5-2026',        market_question:'Will OpenAI release GPT-5 by July 2026?',       trader_address:'0x5e6f7a8b', trader_pseudonym:'Whale #8b',  amount_usd:12500, outcome:'YES', side:'BUY',  timestamp:new Date(now-5*3600000).toISOString(), created_at:new Date().toISOString() },
-    { id:'demo-6',  market_id:'btc-150k-2026',    market_question:'Will Bitcoin reach $150K in 2026?',             trader_address:'0x6f7a8b9c', trader_pseudonym:'Whale #9c',  amount_usd:95000, outcome:'NO',  side:'BUY',  timestamp:new Date(now-6*3600000).toISOString(), created_at:new Date().toISOString() },
-    { id:'demo-7',  market_id:'trump-crypto-2026',market_question:'Will Trump sign a crypto order before end of 2026?', trader_address:'0x7a8b9c0d', trader_pseudonym:'Whale #0d',  amount_usd:18000, outcome:'YES', side:'BUY',  timestamp:new Date(now-8*3600000).toISOString(), created_at:new Date().toISOString() },
-    { id:'demo-8',  market_id:'sp500-6000',       market_question:'Will S&P 500 hit 6,000 before July 2026?',      trader_address:'0x8b9c0d1e', trader_pseudonym:'Whale #1e',  amount_usd:55000, outcome:'YES', side:'BUY',  timestamp:new Date(now-9*3600000).toISOString(), created_at:new Date().toISOString() },
-    { id:'demo-9',  market_id:'ecb-cut-2026',     market_question:'Will the ECB cut rates in June 2026?',          trader_address:'0x9c0d1e2f', trader_pseudonym:'Whale #2f',  amount_usd:27000, outcome:'YES', side:'BUY',  timestamp:new Date(now-11*3600000).toISOString(),created_at:new Date().toISOString() },
-    { id:'demo-10', market_id:'link-40-2026',     market_question:'Will Chainlink hit $40 by June 2026?',          trader_address:'0x0d1e2f3a', trader_pseudonym:'Whale #3a',  amount_usd:8500,  outcome:'YES', side:'BUY',  timestamp:new Date(now-14*3600000).toISOString(),created_at:new Date().toISOString() },
-    { id:'demo-11', market_id:'avax-50-2026',     market_question:'Will Avalanche hit $50 before Q3 2026?',        trader_address:'0x1e2f3a4b', trader_pseudonym:'Whale #4b',  amount_usd:14000, outcome:'NO',  side:'BUY',  timestamp:new Date(now-16*3600000).toISOString(),created_at:new Date().toISOString() },
-    { id:'demo-12', market_id:'oil-sub70-2026',   market_question:'Will oil drop below $70 by Q2 2026?',           trader_address:'0x2f3a4b5c', trader_pseudonym:'Whale #5c',  amount_usd:33000, outcome:'NO',  side:'BUY',  timestamp:new Date(now-20*3600000).toISOString(),created_at:new Date().toISOString() },
-  ];
-  return raw.filter(t => t.amount_usd >= minAmount).slice(0, limit);
 }
 
 export async function getTraders(options?: {
@@ -493,8 +461,8 @@ export async function getMarketById(marketId: string): Promise<Market | null> {
         end_date:     new Date(Date.now() + 30 * 86400000).toISOString(),
         description:  pick.ai_reasoning ?? '',
         updated_at:   pick.created_at ?? new Date().toISOString(),
-        image:        undefined,
-        condition_id: undefined,
+        image:        null,
+        condition_id: null,
       };
     }
   } catch {}

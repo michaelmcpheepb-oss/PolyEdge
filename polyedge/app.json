@@ -58,6 +58,13 @@
           "merchantIdentifier": "merchant.com.polyedge",
           "enableGooglePay": false
         }
+      ],
+      [
+        "react-native-google-mobile-ads",
+        {
+          "androidAppId": "ca-app-pub-3405935169217339~9514491577",
+          "iosAppId": "ca-app-pub-3405935169217339~9514491577"
+        }
       ]
     ],
     "scheme": "polyedge",

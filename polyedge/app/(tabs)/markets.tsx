@@ -1,155 +1,152 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  FlatList,
-  TextInput,
-  Pressable,
-  RefreshControl,
-  ActivityIndicator,
+  View, Text, StyleSheet, FlatList, ScrollView,
+  TouchableOpacity, RefreshControl, TextInput, Image,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import { Colors } from '../../constants/Colors';
-import { useMarkets, useMarketCategories } from '../../hooks/useMarkets';
-import { MarketCard } from '../../components/MarketCard';
-import { SkeletonCard } from '../../components/SkeletonCard';
-import { ErrorState } from '../../components/ErrorState';
-import { Market } from '../../types';
+import { useMarkets } from '../../hooks/useMarkets';
+import { MarketImage } from '../../components/ui/MarketImage';
+import { Images } from '../../constants/Images';
+import type { Market } from '../../types';
 
-const ALL_CATEGORIES = 'All';
+const SORT_OPTS: { id: 'volume' | 'newest' | 'ending_soon'; label: string }[] = [
+  { id: 'volume',      label: 'Volume'   },
+  { id: 'newest',      label: 'Trending' },
+  { id: 'ending_soon', label: 'Ending'   },
+];
+
+const CATEGORIES = [
+  'Trending', 'Politics', 'Crypto', 'Sports',
+  'Economics', 'World', 'Tech', 'Science',
+];
+
+const fmt = (n: number) =>
+  n >= 1_000_000 ? `$${(n / 1_000_000).toFixed(1)}M`
+  : n >= 1_000   ? `$${(n / 1_000).toFixed(1)}K`
+  : `$${n.toFixed(0)}`;
 
 export default function MarketsScreen() {
-  const [selectedCategory, setSelectedCategory] = useState<string>(ALL_CATEGORIES);
-  const [searchQuery, setSearchQuery] = useState('');
+  const router = useRouter();
+  const [cat,    setCat]    = useState('Trending');
+  const [sortIdx, setSortIdx] = useState(0);
+  const [search, setSearch]  = useState('');
 
-  const { data: categories = [] } = useMarketCategories();
-  const { data: markets, isLoading, isError, refetch, isRefetching } = useMarkets({
-    category: selectedCategory !== ALL_CATEGORIES ? selectedCategory : undefined,
-    limit: 50,
-    sortBy: 'volume',
+  const sort = SORT_OPTS[sortIdx % SORT_OPTS.length];
+
+  const { data: raw, isLoading, isError, refetch, isRefetching } = useMarkets({
+    category: cat !== 'Trending' ? cat : undefined,
+    sortBy:   sort.id,
+    limit:    50,
   });
 
-  const filteredMarkets = useMemo(() => {
-    if (!markets) return [];
-    if (!searchQuery.trim()) return markets;
-    const query = searchQuery.toLowerCase();
-    return markets.filter(
-      (m: Market) =>
-        m.question.toLowerCase().includes(query) ||
-        (m.category && m.category.toLowerCase().includes(query))
-    );
-  }, [markets, searchQuery]);
+  const markets = useMemo(() => {
+    let list = raw ?? [];
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      list = list.filter((m) => m.question.toLowerCase().includes(q));
+    }
+    return list;
+  }, [raw, search]);
 
-  const allCategories = [ALL_CATEGORIES, ...categories];
+  const renderItem = ({ item }: { item: Market }) => {
+    const yesPct = item.yes_price * 100;
+    const probColor =
+      yesPct > 60 ? '#00C07F' :
+      yesPct < 40 ? '#FF4757' : '#7A7A9A';
+    const probBg    = probColor + '20';
+    const probBorder = probColor + '99';
 
-  const renderMarketItem = useCallback(
-    ({ item }: { item: Market }) => <MarketCard market={item} />,
-    []
-  );
-
-  const renderHeader = () => (
-    <View>
-      {/* Search Bar */}
-      <View style={styles.searchContainer}>
-        <Ionicons name="search" size={18} color={Colors.textSecondary} style={styles.searchIcon} />
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Search markets..."
-          placeholderTextColor={Colors.textTertiary}
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-        />
-        {searchQuery.length > 0 && (
-          <Pressable onPress={() => setSearchQuery('')}>
-            <Ionicons name="close-circle" size={18} color={Colors.textSecondary} />
-          </Pressable>
-        )}
-      </View>
-
-      {/* Category Filter Chips */}
-      <FlatList
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        data={allCategories}
-        keyExtractor={(item) => item}
-        contentContainerStyle={styles.categoryList}
-        renderItem={({ item }) => (
-          <Pressable
-            style={[
-              styles.categoryChip,
-              selectedCategory === item && styles.categoryChipActive,
-            ]}
-            onPress={() => setSelectedCategory(item)}
-          >
-            <Text
-              style={[
-                styles.categoryChipText,
-                selectedCategory === item && styles.categoryChipTextActive,
-              ]}
-            >
-              {item}
-            </Text>
-          </Pressable>
-        )}
-      />
-
-      {/* Section Header */}
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>
-          {selectedCategory === ALL_CATEGORIES ? 'All Markets' : selectedCategory}
-        </Text>
-        <Text style={styles.sectionCount}>
-          {filteredMarkets.length} market{filteredMarkets.length !== 1 ? 's' : ''}
-        </Text>
-      </View>
-    </View>
-  );
-
-  if (isLoading) {
     return (
-      <View style={styles.container}>
-        <FlatList
-          data={[1, 2, 3, 4, 5, 6]}
-          renderItem={() => <SkeletonCard />}
-          keyExtractor={(item) => String(item)}
-          ListHeaderComponent={renderHeader}
-          contentContainerStyle={styles.listContent}
-        />
-      </View>
-    );
-  }
+      <TouchableOpacity
+        style={styles.card}
+        onPress={() => router.push(`/market/${item.id}`)}
+        activeOpacity={0.75}
+      >
+        {/* Left: image */}
+        <MarketImage image={item.image} category={item.category} size={56} />
 
-  if (isError) {
-    return (
-      <View style={styles.container}>
-        <ErrorState
-          message="Failed to load markets. Pull down to retry."
-          onRetry={refetch}
-        />
-      </View>
+        {/* Right: info */}
+        <View style={styles.cardRight}>
+          <Text style={styles.cardQuestion} numberOfLines={2}>{item.question}</Text>
+
+          <View style={styles.cardStats}>
+            {/* Probability badge */}
+            <View style={[styles.probBadge, { backgroundColor: probBg, borderColor: probBorder }]}>
+              <Text style={[styles.probText, { color: probColor }]}>
+                {yesPct.toFixed(0)}%
+              </Text>
+            </View>
+
+            {/* Volume */}
+            <Text style={styles.statText}>{fmt(item.volume_24h)}</Text>
+
+            {/* Category */}
+            <Text style={styles.statText}>{item.category}</Text>
+          </View>
+        </View>
+      </TouchableOpacity>
     );
-  }
+  };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
+      {/* Header */}
+      <View style={styles.header}>
+        <Text style={styles.title}>Markets</Text>
+        <TouchableOpacity
+          style={styles.sortPill}
+          onPress={() => setSortIdx((i) => (i + 1) % SORT_OPTS.length)}
+        >
+          <Text style={styles.sortPillText}>{sort.label} ▾</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Category chips */}
+      <View style={styles.catWrap}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.catRow}>
+          {CATEGORIES.map((c) => (
+            <TouchableOpacity
+              key={c}
+              style={[styles.catChip, cat === c && styles.catChipActive]}
+              onPress={() => setCat(c)}
+            >
+              <Text style={[styles.catChipText, cat === c && styles.catChipTextActive]}>{c}</Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
+
+      {/* Search */}
+      <View style={styles.searchWrap}>
+        <Ionicons name="search-outline" size={16} color="#7A7A9A" />
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Search markets…"
+          placeholderTextColor="#7A7A9A"
+          value={search}
+          onChangeText={setSearch}
+        />
+        {search.length > 0 && (
+          <TouchableOpacity onPress={() => setSearch('')}>
+            <Ionicons name="close-circle" size={16} color="#7A7A9A" />
+          </TouchableOpacity>
+        )}
+      </View>
+
+      {/* List */}
       <FlatList
-        data={filteredMarkets}
-        renderItem={renderMarketItem}
-        keyExtractor={(item) => item.id || item.question}
-        ListHeaderComponent={renderHeader}
-        ListEmptyComponent={
-          <View style={styles.emptyState}>
-            <Ionicons name="search-outline" size={48} color={Colors.textTertiary} />
-            <Text style={styles.emptyTitle}>No markets found</Text>
-            <Text style={styles.emptySubtitle}>
-              {searchQuery
-                ? 'Try adjusting your search or filters'
-                : 'No markets available in this category'}
-            </Text>
-          </View>
-        }
+        data={markets}
+        renderItem={renderItem}
+        keyExtractor={(m) => m.id}
         contentContainerStyle={styles.listContent}
+        showsVerticalScrollIndicator={false}
+        removeClippedSubviews
+        maxToRenderPerBatch={10}
+        windowSize={12}
+        initialNumToRender={8}
         refreshControl={
           <RefreshControl
             refreshing={isRefetching}
@@ -158,95 +155,138 @@ export default function MarketsScreen() {
             colors={[Colors.accent]}
           />
         }
+        ListEmptyComponent={
+          isLoading ? null : (
+            <View style={styles.empty}>
+              {Images.emptyState && (
+                <Image source={Images.emptyState} style={styles.emptyImage} resizeMode="contain" />
+              )}
+              <Text style={styles.emptyTitle}>
+                {isError ? 'Failed to load markets' : 'No markets found'}
+              </Text>
+              <Text style={styles.emptySub}>
+                {isError ? 'Pull to retry' : 'Try a different filter or category'}
+              </Text>
+            </View>
+          )
+        }
       />
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  listContent: {
-    padding: 16,
-    paddingBottom: 32,
-  },
-  searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.surface,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    height: 44,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  searchIcon: {
-    marginRight: 8,
-  },
-  searchInput: {
-    flex: 1,
-    color: Colors.textPrimary,
-    fontSize: 15,
-  },
-  categoryList: {
-    paddingVertical: 8,
-    gap: 8,
-  },
-  categoryChip: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: Colors.surface,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    marginRight: 8,
-  },
-  categoryChipActive: {
-    backgroundColor: Colors.accent + '20',
-    borderColor: Colors.accent,
-  },
-  categoryChipText: {
-    fontSize: 13,
-    color: Colors.textSecondary,
-    fontWeight: '500',
-  },
-  categoryChipTextActive: {
-    color: Colors.accent,
-  },
-  sectionHeader: {
+  container: { flex: 1, backgroundColor: '#08080F' },
+
+  header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.06)',
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  sortPill: {
+    backgroundColor: '#161625',
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: '#2A2A45',
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+  },
+  sortPillText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#00D4AA',
+  },
+
+  catWrap: {
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.06)',
+  },
+  catRow: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    gap: 8,
+  },
+  catChip: {
+    backgroundColor: '#161625',
+    borderRadius: 999,
+    paddingHorizontal: 16,
     paddingVertical: 8,
   },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: Colors.textPrimary,
-  },
-  sectionCount: {
-    fontSize: 13,
-    color: Colors.textSecondary,
-  },
-  emptyState: {
+  catChipActive:     { backgroundColor: '#00D4AA' },
+  catChipText:       { fontSize: 14, fontWeight: '600', color: '#7A7A9A' },
+  catChipTextActive: { color: '#08080F' },
+
+  searchWrap: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 60,
+    backgroundColor: '#161625',
+    marginHorizontal: 16,
+    marginVertical: 8,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.06)',
+    paddingHorizontal: 14,
+    height: 40,
+    gap: 8,
   },
-  emptyTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: Colors.textPrimary,
-    marginTop: 16,
-  },
-  emptySubtitle: {
+  searchInput: {
+    flex: 1,
     fontSize: 14,
-    color: Colors.textSecondary,
-    textAlign: 'center',
-    marginTop: 8,
-    paddingHorizontal: 40,
+    color: '#FFFFFF',
   },
+
+  listContent: { paddingHorizontal: 16, paddingBottom: 32 },
+
+  card: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#161625',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.06)',
+    gap: 12,
+  },
+  cardRight: { flex: 1 },
+  cardQuestion: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    lineHeight: 20,
+  },
+  cardStats: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 6,
+    gap: 8,
+  },
+  probBadge: {
+    borderRadius: 6,
+    borderWidth: 1,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  probText: {
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  statText: {
+    fontSize: 12,
+    color: '#7A7A9A',
+  },
+
+  empty:      { alignItems: 'center', paddingVertical: 80, gap: 12 },
+  emptyImage: { width: 120, height: 120, opacity: 0.7 },
+  emptyTitle: { fontSize: 18, fontWeight: '600', color: '#FFFFFF' },
+  emptySub:   { fontSize: 14, color: '#7A7A9A' },
 });

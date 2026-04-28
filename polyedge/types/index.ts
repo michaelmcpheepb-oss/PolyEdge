@@ -15,6 +15,8 @@ export interface Market {
   end_date: string; // ISO string
   description?: string;
   updated_at: string;
+  image?: string;
+  condition_id?: string;
 }
 
 // Whale Trade

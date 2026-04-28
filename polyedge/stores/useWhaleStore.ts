@@ -14,7 +14,7 @@ interface WhaleStore {
 export const useWhaleStore = create<WhaleStore>()(
   persist(
     (set) => ({
-      threshold: 10000, // $10K default
+      threshold: 1000, // $1K default
       setThreshold: (threshold) => set({ threshold }),
       showRecentOnly: false,
       setShowRecentOnly: (showRecentOnly) => set({ showRecentOnly }),

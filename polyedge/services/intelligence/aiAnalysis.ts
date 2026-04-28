@@ -1,6 +1,6 @@
 /**
  * AI Analysis Service for PolyEdge
- * Generates 2-sentence AI briefs for markets using Claude API
+ * Generates ultra-concise analysis briefs using DeepSeek API
  * Falls back to smart analysis if no API key available
  */
 
@@ -34,53 +34,59 @@ export async function generateAIBrief(
   marketData: MarketData,
   smartMoneyData?: SmartMoneyData
 ): Promise<AIBrief> {
-  const anthropicKey = process.env.EXPO_PUBLIC_ANTHROPIC_KEY;
+  const deepseekKey = process.env.EXPO_PUBLIC_DEEPSEEK_KEY;
 
-  if (anthropicKey && anthropicKey !== 'your_claude_api_key_here') {
+  if (deepseekKey && deepseekKey !== 'your_deepseek_api_key_here') {
     try {
-      return await generateClaudeBrief(marketData, anthropicKey, smartMoneyData);
+      return await generateDeepSeekBrief(marketData, deepseekKey, smartMoneyData);
     } catch (error) {
-      console.warn('Claude API failed, falling back to smart analysis:', error);
+      console.warn('DeepSeek API failed, falling back to smart analysis:', error);
       return generateSmartBrief(marketData, smartMoneyData);
     }
   } else {
-    console.log('No Claude API key configured, using smart analysis');
+    console.log('No DeepSeek API key configured, using smart analysis');
     return generateSmartBrief(marketData, smartMoneyData);
   }
 }
 
-async function generateClaudeBrief(
+async function generateDeepSeekBrief(
   marketData: MarketData,
   apiKey: string,
   smartMoneyData?: SmartMoneyData
 ): Promise<AIBrief> {
   const prompt = buildAnalysisPrompt(marketData, smartMoneyData);
 
-  const response = await fetch('https://api.anthropic.com/v1/messages', {
+  const response = await fetch('https://api.deepseek.com/chat/completions', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01'
+      'Authorization': `Bearer ${apiKey}`,
     },
     body: JSON.stringify({
-      model: 'claude-3-sonnet-20240229',
+      model: 'deepseek-chat',
       max_tokens: 150,
-      messages: [{
-        role: 'user',
-        content: prompt
-      }]
-    })
+      messages: [
+        {
+          role: 'system',
+          content: 'You are a prediction market trading analyst. Be extremely concise. Return exactly 3 bullet points. Each bullet MAX 8 words. No full sentences. Data-driven only.',
+        },
+        {
+          role: 'user',
+          content: prompt,
+        },
+      ],
+    }),
   });
 
   if (!response.ok) {
-    throw new Error(`Claude API error: ${response.status}`);
+    throw new Error(`DeepSeek API error: ${response.status}`);
   }
 
   const data = await response.json();
-  const brief = data.content[0].text.trim();
+  const text = data.choices?.[0]?.message?.content ?? '';
+  const brief = text.trim();
 
-  // Extract confidence and factors from Claude's response
+  // Extract confidence and factors from response
   const confidence = extractConfidenceFromBrief(brief);
   const keyFactors = extractKeyFactorsFromBrief(brief, marketData, smartMoneyData);
 
@@ -164,23 +170,10 @@ function buildAnalysisPrompt(
   smartMoneyData?: SmartMoneyData
 ): string {
   const smartMoneyInfo = smartMoneyData
-    ? `Smart money analysis: ${smartMoneyData.direction} direction with ${smartMoneyData.convictionPct}% conviction from ${smartMoneyData.totalTopWallets} top wallets.`
-    : 'No smart money data available.';
+    ? `Smart money: ${smartMoneyData.direction} ${smartMoneyData.convictionPct}% from ${smartMoneyData.totalTopWallets} wallets.`
+    : 'No smart money data.';
 
-  return `You are an expert prediction market analyst. Analyze this Polymarket question and provide exactly 2 sentences:
-
-Market: "${marketData.question}"
-Current YES price: ${Math.round(marketData.yesPrice * 100)}%
-Current NO price: ${Math.round(marketData.noPrice * 100)}%
-24h volume: $${marketData.volume24h.toLocaleString()}
-Category: ${marketData.category || 'Unknown'}
-${smartMoneyInfo}
-
-Provide exactly 2 sentences:
-1. Current market signal and what it indicates
-2. Smart money/elite trader perspective and overall confidence level
-
-Be concise, analytical, and focus on actionable insights. Don't hedge or qualify excessively.`;
+  return `Market: "${marketData.question}". YES: ${Math.round(marketData.yesPrice * 100)}%. NO: ${Math.round(marketData.noPrice * 100)}%. Volume: $${marketData.volume24h.toLocaleString()}. ${smartMoneyInfo} Give 3 trading strategy bullets.`;
 }
 
 function extractConfidenceFromBrief(brief: string): 'HIGH' | 'MEDIUM' | 'LOW' {

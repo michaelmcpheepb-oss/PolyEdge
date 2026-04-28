@@ -35,6 +35,14 @@ interface DailyPick {
   currentYesPrice: number;
   currentNoPrice: number;
   category?: string;
+  // enriched by enrichPick()
+  verdict?: string;
+  kelly_pct?: number;
+  edge_pct?: number;
+  edge_label?: string;
+  risk_level?: string;
+  reasoning_bullets?: string[];
+  ai_probability?: number;
 }
 
 interface TopTrader {
@@ -54,6 +62,58 @@ const supabase = createClient(
   process.env.EXPO_PUBLIC_SUPABASE_URL!,
   process.env.EXPO_PUBLIC_SUPABASE_SERVICE_ROLE_KEY!
 );
+
+function enrichPick(pick: any, smartMoneyPct: number): any {
+  const yesPricePct = (pick.currentYesPrice ?? 0.5) * 100;
+  const confidence  = pick.confidenceScore ?? 50;
+  const smart       = smartMoneyPct ?? 50;
+
+  // Verdict
+  let verdict = 'NEUTRAL';
+  if (confidence > 80 && smart > 70) verdict = 'STRONG_BUY';
+  else if (confidence > 65) verdict = 'BUY';
+  else if (confidence > 50) verdict = 'NEUTRAL';
+  else if (confidence > 35) verdict = 'AVOID';
+  else verdict = 'STRONG_AVOID';
+
+  // Kelly
+  const p         = confidence / 100;
+  const yes_price = pick.currentYesPrice ?? 0.5;
+  const b         = (1 / yes_price) - 1;
+  const kelly     = (p * (b + 1) - 1) / b;
+  const kelly_pct = Math.max(0, Math.min(25, kelly * 100));
+
+  // Edge
+  const edge_pct   = confidence - yesPricePct;
+  const edge_label = edge_pct > 5  ? 'UNDERVALUED' :
+                     edge_pct < -5 ? 'OVERVALUED'  : 'FAIR VALUE';
+
+  // Risk
+  const risk_level = kelly_pct > 10 ? 'LOW' :
+                     kelly_pct > 3  ? 'MEDIUM' : 'HIGH';
+
+  // Bullets derived from signals
+  const bullets = [
+    confidence > 70 ? 'Strong model confidence' : 'Moderate confidence signal',
+    smart > 65
+      ? `${Math.round(smart)}% smart money aligned`
+      : 'Mixed smart money signal',
+    edge_pct > 5
+      ? `Market undervaluing by ${edge_pct.toFixed(1)}%`
+      : 'Odds near fair value',
+  ];
+
+  return {
+    ...pick,
+    verdict,
+    kelly_pct:        Math.round(kelly_pct * 10) / 10,
+    edge_pct:         Math.round(edge_pct  * 10) / 10,
+    edge_label,
+    risk_level,
+    reasoning_bullets: bullets,
+    ai_probability:   confidence,
+  };
+}
 
 export class DailyPicksEngine {
   private readonly GAMMA_API_URL = process.env.EXPO_PUBLIC_POLYMARKET_GAMMA_API || 'https://gamma-api.polymarket.com';
@@ -309,7 +369,7 @@ export class DailyPicksEngine {
         recommendedOutcome = yesPrice > 0.5 ? 'YES' : 'NO';
       }
 
-      picks.push({
+      const basePick = {
         marketId: market.id,
         marketQuestion: market.question,
         recommendedOutcome,
@@ -319,8 +379,10 @@ export class DailyPicksEngine {
         smartMoneyPct: smartMoney?.convictionPct,
         currentYesPrice: yesPrice,
         currentNoPrice: market.outcomePrices[1] || (1 - yesPrice),
-        category: market.category
-      });
+        category: market.category,
+      };
+
+      picks.push(enrichPick(basePick, smartMoney?.convictionPct ?? 50));
     }
 
     return picks;
@@ -369,18 +431,26 @@ export class DailyPicksEngine {
         await supabase
           .from('daily_picks')
           .insert({
-            market_id: pick.marketId,
-            market_question: pick.marketQuestion,
-            recommended_outcome: pick.recommendedOutcome,
-            confidence_score: pick.confidenceScore,
-            ai_reasoning: pick.aiReasoning,
+            market_id:            pick.marketId,
+            market_question:      pick.marketQuestion,
+            recommended_outcome:  pick.recommendedOutcome,
+            confidence_score:     pick.confidenceScore,
+            ai_reasoning:         pick.aiReasoning,
             smart_money_direction: pick.smartMoneyDirection,
-            smart_money_pct: pick.smartMoneyPct,
-            current_yes_price: pick.currentYesPrice,
-            current_no_price: pick.currentNoPrice,
-            category: pick.category,
-            pick_date: new Date().toISOString().split('T')[0],
-            created_at: new Date().toISOString()
+            smart_money_pct:      pick.smartMoneyPct,
+            current_yes_price:    pick.currentYesPrice,
+            current_no_price:     pick.currentNoPrice,
+            category:             pick.category,
+            pick_date:            new Date().toISOString().split('T')[0],
+            created_at:           new Date().toISOString(),
+            // enriched fields
+            verdict:              pick.verdict,
+            kelly_pct:            pick.kelly_pct,
+            edge_pct:             pick.edge_pct,
+            edge_label:           pick.edge_label,
+            risk_level:           pick.risk_level,
+            reasoning_bullets:    pick.reasoning_bullets,
+            ai_probability:       pick.ai_probability,
           });
       } catch (error) {
         console.warn(`Failed to save pick for market ${pick.marketId}:`, error);

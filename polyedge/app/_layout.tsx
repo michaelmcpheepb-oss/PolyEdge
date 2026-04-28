@@ -1,4 +1,5 @@
 import { lazy, Suspense, useEffect } from 'react';
+import { Platform } from 'react-native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -33,8 +34,10 @@ export default function RootLayout() {
           console.error('Auth callback error:', error);
         }
       }
-      const { handleStripeRedirect } = await import('../services/stripe');
-      handleStripeRedirect(event.url, 'user_mock_id');
+      if (Platform.OS !== 'web') {
+        const { handleStripeRedirect } = await import('../services/stripe');
+        handleStripeRedirect(event.url, 'user_mock_id');
+      }
     };
 
     Linking.getInitialURL().then((url) => {

@@ -3,16 +3,22 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../constants/Colors';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { openStripeCheckout } from '../services/stripe-new';
 import { useSubscription, useIsPro } from '../hooks/useSubscription';
 import { useUserStore } from '../stores/useUserStore';
+import { getMonetisationConfig, type MonetisationConfig } from '../services/geoMonetisation';
 
 export default function ProScreen() {
   const router = useRouter();
   const { user } = useUserStore();
   const [selectedPlan, setSelectedPlan] = useState<'weekly' | 'monthly'>('monthly');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [geoConfig, setGeoConfig] = useState<MonetisationConfig | null>(null);
+
+  useEffect(() => {
+    getMonetisationConfig().then(setGeoConfig).catch(() => {});
+  }, []);
   
   const { data: subscription, isLoading } = useSubscription();
   const isPro = useIsPro();
@@ -185,10 +191,46 @@ export default function ProScreen() {
     );
   }
 
+  // ── Tier 3 — PolyEdge is free in your region ─────────────────────────────────
+  if (geoConfig?.tier === 3) {
+    return (
+      <SafeAreaView style={styles.container} edges={['top']}>
+        <View style={styles.header}>
+          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+            <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
+          </TouchableOpacity>
+          <View style={styles.headerTitle}>
+            <Text style={styles.headerTitleText}>PolyEdge</Text>
+          </View>
+          <View style={styles.headerRight} />
+        </View>
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32, gap: 16 }}>
+          <Text style={{ fontSize: 64 }}>✅</Text>
+          <Text style={{ fontSize: 24, fontWeight: '800', color: '#FFFFFF', textAlign: 'center' }}>
+            PolyEdge is free for you
+          </Text>
+          <Text style={{ fontSize: 15, color: '#A0A0B8', textAlign: 'center', lineHeight: 22 }}>
+            Enjoy unlimited AI analyses supported by ads.{'\n'}
+            No subscription needed in your region.
+          </Text>
+          <TouchableOpacity
+            style={{ marginTop: 16, backgroundColor: '#00D4AA', borderRadius: 12, paddingHorizontal: 28, paddingVertical: 14 }}
+            onPress={() => router.back()}
+          >
+            <Text style={{ fontSize: 16, fontWeight: '700', color: '#08080F' }}>Back to Markets</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  // Dynamic monthly price based on geo tier
+  const monthlyPrice = geoConfig?.proPriceMonthly ?? '€9.99';
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.backButton}
           onPress={() => router.back()}
         >
@@ -281,7 +323,7 @@ export default function ProScreen() {
                   </View>
                 )}
               </View>
-              <Text style={styles.pricingPrice}>€9.99</Text>
+              <Text style={styles.pricingPrice}>{monthlyPrice}</Text>
               <Text style={styles.pricingPeriod}>/month</Text>
               <Text style={styles.pricingDescription}>
                 Best value for active traders

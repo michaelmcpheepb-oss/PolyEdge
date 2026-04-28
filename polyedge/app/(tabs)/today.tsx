@@ -1,37 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import {
-  View,
-  Text,
-  ScrollView,
-  StyleSheet,
-  Pressable,
-  ActivityIndicator,
-  RefreshControl,
-  Alert
+  View, Text, ScrollView, StyleSheet,
+  ActivityIndicator, RefreshControl, Image, Platform,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { Colors } from '../../constants/Colors';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Images } from '../../constants/Images';
 import { createClient } from '@supabase/supabase-js';
+import { PickCard, type PickCardData } from '../../components/PickCard';
+import { useIsPro } from '../../hooks/useSubscription';
+import { AD_UNITS } from '../../services/admob';
 
 const supabase = createClient(
   process.env.EXPO_PUBLIC_SUPABASE_URL!,
   process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!
 );
-
-interface DailyPick {
-  id: string;
-  market_id: string;
-  market_question: string;
-  recommended_outcome: 'YES' | 'NO';
-  confidence_score: number;
-  ai_reasoning: string;
-  smart_money_direction?: 'YES' | 'NO' | 'MIXED';
-  smart_money_pct?: number;
-  current_yes_price: number;
-  current_no_price: number;
-  category?: string;
-  created_at: string;
-}
 
 interface AccuracyMetrics {
   total_picks: number;
@@ -39,565 +21,276 @@ interface AccuracyMetrics {
   accuracy_pct: number;
 }
 
-interface TrendingMarket {
+interface ResolvedPick {
   id: string;
-  market_id: string;
-  market_question: string;
-  confidence_score: number;
-  momentum: string;
-  momentum_pct: number;
+  was_correct: boolean | null;
 }
 
 export default function TodayScreen() {
-  const [dailyPicks, setDailyPicks] = useState<DailyPick[]>([]);
-  const [accuracy, setAccuracy] = useState<AccuracyMetrics | null>(null);
-  const [trendingMarkets, setTrendingMarkets] = useState<TrendingMarket[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [isProUser, setIsProUser] = useState(false); // TODO: Implement real subscription check
+  const [picks,         setPicks]         = useState<PickCardData[]>([]);
+  const [accuracy,      setAccuracy]      = useState<AccuracyMetrics | null>(null);
+  const [recentResolved,setRecentResolved]= useState<ResolvedPick[]>([]);
+  const [loading,       setLoading]       = useState(true);
+  const [refreshing,    setRefreshing]    = useState(false);
 
-  useEffect(() => {
-    loadTodayData();
-  }, []);
+  useEffect(() => { load(); }, []);
 
-  const loadTodayData = async () => {
+  const load = async () => {
     try {
-      const [picksData, accuracyData, trendingData] = await Promise.all([
-        loadDailyPicks(),
-        loadAccuracyMetrics(),
-        loadTrendingMarkets()
+      const [picksData, accData, resolvedData] = await Promise.all([
+        loadPicks(),
+        loadAccuracy(),
+        loadRecentResolved(),
       ]);
-
-      setDailyPicks(picksData);
-      setAccuracy(accuracyData);
-      setTrendingMarkets(trendingData);
-    } catch (error) {
-      console.error('Failed to load today data:', error);
-      Alert.alert('Error', 'Failed to load daily picks. Please try again.');
+      setPicks(picksData);
+      setAccuracy(accData);
+      setRecentResolved(resolvedData);
+    } catch (e) {
+      console.error('Failed to load today data:', e);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
   };
 
-  const loadDailyPicks = async (): Promise<DailyPick[]> => {
-    const today = new Date().toISOString().split('T')[0];
-
+  const loadPicks = async (): Promise<PickCardData[]> => {
+    // Fetch picks from last 7 days so seeded/recent picks always show
+    const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
     const { data, error } = await supabase
       .from('daily_picks')
       .select('*')
-      .eq('pick_date', today)
-      .order('confidence_score', { ascending: false });
-
-    if (error) throw error;
-    return data || [];
+      .gte('pick_date', since)
+      .order('pick_date',        { ascending: false })
+      .order('confidence_score', { ascending: false })
+      .limit(10);
+    if (error) console.error('loadPicks error:', error.message);
+    return (data ?? []) as PickCardData[];
   };
 
-  const loadAccuracyMetrics = async (): Promise<AccuracyMetrics | null> => {
+  const loadAccuracy = async (): Promise<AccuracyMetrics | null> => {
     const { data, error } = await supabase
       .from('prediction_accuracy')
       .select('*')
       .order('updated_at', { ascending: false })
-      .limit(1)
-      .single();
-
-    if (error) return null;
-    return data;
+      .limit(1);
+    if (error) console.error('loadAccuracy error:', error.message);
+    return data?.[0] ?? null;
   };
 
-  const loadTrendingMarkets = async (): Promise<TrendingMarket[]> => {
+  const loadRecentResolved = async (): Promise<ResolvedPick[]> => {
     const { data, error } = await supabase
-      .from('market_intelligence')
-      .select('*')
-      .not('momentum', 'eq', 'NEUTRAL')
-      .order('momentum_pct', { ascending: false })
-      .limit(3);
-
-    if (error) return [];
-    return data || [];
+      .from('daily_picks')
+      .select('id, was_correct')
+      .eq('resolved', true)
+      .not('was_correct', 'is', null)
+      .order('pick_date', { ascending: false })
+      .limit(10);
+    if (error) console.error('loadRecentResolved error:', error.message);
+    return (data ?? []) as ResolvedPick[];
   };
 
-  const onRefresh = () => {
-    setRefreshing(true);
-    loadTodayData();
-  };
-
-  const getGreeting = () => {
-    const hour = new Date().getHours();
-    if (hour < 12) return 'Good morning';
-    if (hour < 17) return 'Good afternoon';
-    return 'Good evening';
-  };
-
-  const getConfidenceColor = (score: number) => {
-    if (score >= 75) return Colors.success;
-    if (score >= 50) return Colors.warning;
-    return Colors.textSecondary;
-  };
-
-  const getConfidenceLabel = (score: number) => {
-    if (score >= 75) return 'HIGH';
-    if (score >= 50) return 'MEDIUM';
-    return 'LOW';
-  };
-
-  const getSmartMoneyIndicator = (direction?: string, pct?: number) => {
-    if (!direction || !pct) return null;
-
-    const color = direction === 'YES' ? Colors.success :
-                 direction === 'NO' ? Colors.error : Colors.textSecondary;
-
-    return (
-      <View style={[styles.smartMoneyBadge, { backgroundColor: color + '20' }]}>
-        <View style={[styles.smartMoneyDot, { backgroundColor: color }]} />
-        <Text style={[styles.smartMoneyText, { color }]}>
-          Smart Money: {direction} ({pct}%)
-        </Text>
-      </View>
-    );
-  };
-
-  const handleUpgrade = () => {
-    // TODO: Navigate to subscription screen
-    Alert.alert('Upgrade to Pro', 'Get access to all 5 daily picks and advanced analytics!');
-  };
+  const isPro = useIsPro();
+  const accPct = accuracy?.accuracy_pct ?? 0;
 
   if (loading) {
     return (
-      <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color={Colors.accent} />
-        <Text style={styles.loadingText}>Loading daily picks...</Text>
+      <View style={styles.center}>
+        <ActivityIndicator size="large" color="#00D4AA" />
       </View>
     );
   }
 
-  const today = new Date().toLocaleDateString('en-US', {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric'
-  });
-
-  const visiblePicks = isProUser ? dailyPicks : dailyPicks.slice(0, 3);
-
   return (
-    <ScrollView
-      style={styles.container}
-      refreshControl={
-        <RefreshControl
-          refreshing={refreshing}
-          onRefresh={onRefresh}
-          tintColor={Colors.accent}
-        />
-      }
-    >
-      {/* Header */}
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.greeting}>{getGreeting()}</Text>
-          <Text style={styles.date}>{today}</Text>
-        </View>
-
-        {/* Accuracy Badge */}
-        {accuracy && (
-          <View style={styles.accuracyBadge}>
-            <Text style={styles.accuracyTitle}>Track Record</Text>
-            <Text style={styles.accuracyScore}>{accuracy.accuracy_pct.toFixed(1)}%</Text>
-            <Text style={styles.accuracySubtext}>
-              {accuracy.correct_picks}/{accuracy.total_picks} picks
-            </Text>
-          </View>
-        )}
-      </View>
-
-      {/* Daily Picks Section */}
-      <View style={styles.section}>
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Today's Picks</Text>
-          <Text style={styles.sectionSubtitle}>
-            AI-selected predictions with confidence scores
-          </Text>
-        </View>
-
-        {visiblePicks.length === 0 ? (
-          <View style={styles.emptyState}>
-            <Ionicons name="hourglass-outline" size={48} color={Colors.textSecondary} />
-            <Text style={styles.emptyTitle}>Daily picks loading...</Text>
-            <Text style={styles.emptySubtitle}>
-              Our AI is analyzing markets and will have picks ready soon.
-            </Text>
-          </View>
-        ) : (
-          visiblePicks.map((pick, index) => (
-            <View key={pick.id} style={styles.pickCard}>
-              <View style={styles.pickHeader}>
-                <View style={styles.pickIndex}>
-                  <Text style={styles.pickIndexText}>{index + 1}</Text>
-                </View>
-
-                <View style={styles.confidenceContainer}>
-                  <View style={[styles.confidenceBadge, { backgroundColor: getConfidenceColor(pick.confidence_score) + '20' }]}>
-                    <Text style={[styles.confidenceText, { color: getConfidenceColor(pick.confidence_score) }]}>
-                      {getConfidenceLabel(pick.confidence_score)} ({pick.confidence_score})
-                    </Text>
-                  </View>
-                </View>
-
-                {pick.category && (
-                  <View style={styles.categoryBadge}>
-                    <Text style={styles.categoryText}>{pick.category}</Text>
-                  </View>
-                )}
-              </View>
-
-              <Text style={styles.pickQuestion}>{pick.market_question}</Text>
-
-              {/* Recommendation */}
-              <View style={styles.recommendationContainer}>
-                <View style={[
-                  styles.recommendationBadge,
-                  {
-                    backgroundColor: pick.recommended_outcome === 'YES' ? Colors.success + '20' : Colors.error + '20'
-                  }
-                ]}>
-                  <Text style={[
-                    styles.recommendationText,
-                    {
-                      color: pick.recommended_outcome === 'YES' ? Colors.success : Colors.error
-                    }
-                  ]}>
-                    Recommendation: {pick.recommended_outcome}
-                  </Text>
-                </View>
-
-                <View style={styles.priceContainer}>
-                  <Text style={styles.priceText}>
-                    Current: {pick.recommended_outcome === 'YES' ?
-                      Math.round(pick.current_yes_price * 100) :
-                      Math.round(pick.current_no_price * 100)}%
-                  </Text>
-                </View>
-              </View>
-
-              {/* Smart Money Indicator */}
-              {getSmartMoneyIndicator(pick.smart_money_direction, pick.smart_money_pct)}
-
-              {/* AI Reasoning */}
-              <View style={styles.reasoningContainer}>
-                <Text style={styles.reasoningLabel}>AI Analysis:</Text>
-                <Text style={styles.reasoningText}>{pick.ai_reasoning}</Text>
-              </View>
-            </View>
-          ))
-        )}
-
-        {/* Upgrade CTA for free users */}
-        {!isProUser && dailyPicks.length > 3 && (
-          <Pressable style={styles.upgradeCTA} onPress={handleUpgrade}>
-            <View style={styles.upgradeContent}>
-              <Ionicons name="star" size={20} color={Colors.accent} />
-              <Text style={styles.upgradeText}>
-                Unlock {dailyPicks.length - 3} more daily picks with Pro
+    <SafeAreaView style={styles.container} edges={['top']}>
+      <ScrollView
+        style={styles.scroll}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => { setRefreshing(true); load(); }}
+            tintColor="#00D4AA"
+            colors={['#00D4AA']}
+          />
+        }
+      >
+        {/* Header */}
+        <View style={styles.header}>
+          <Image source={Images.logo} style={styles.logo} resizeMode="contain" />
+          {accuracy && (
+            <View style={styles.accuracyPill}>
+              <Text style={styles.accuracyPillText}>
+                {accPct.toFixed(0)}% Accurate
               </Text>
             </View>
-            <Ionicons name="chevron-forward" size={20} color={Colors.accent} />
-          </Pressable>
-        )}
-      </View>
+          )}
+        </View>
 
-      {/* Trending Markets */}
-      {trendingMarkets.length > 0 && (
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Trending Now</Text>
-            <Text style={styles.sectionSubtitle}>
-              Markets with significant momentum
+        {/* Track Record Card */}
+        {accuracy && (
+          <View style={styles.trackCard}>
+            <Text style={styles.trackLabel}>TRACK RECORD</Text>
+            <Text style={styles.trackSub}>Last 30 days</Text>
+            <Text style={styles.trackNum}>{accPct.toFixed(0)}%</Text>
+            <Text style={styles.trackSubNum}>
+              {accuracy.correct_picks} of {accuracy.total_picks} picks correct
+            </Text>
+            <View style={styles.trackDots}>
+              {recentResolved.length > 0 ? (
+                recentResolved.map((pick, i) => (
+                  <View
+                    key={pick.id ?? i}
+                    style={[
+                      styles.trackDot,
+                      { backgroundColor: pick.was_correct ? '#00FFB2' : '#FF4757' },
+                    ]}
+                  />
+                ))
+              ) : (
+                Array.from({ length: 10 }, (_, i) => (
+                  <View key={i} style={[styles.trackDot, { backgroundColor: '#2A2A45' }]} />
+                ))
+              )}
+            </View>
+            <Text style={styles.trackFooter}>
+              *Based on resolved picks where outcome was confirmed on-chain
             </Text>
           </View>
+        )}
 
-          {trendingMarkets.map((market) => (
-            <View key={market.id} style={styles.trendingCard}>
-              <View style={styles.trendingHeader}>
-                <View style={[
-                  styles.momentumBadge,
-                  {
-                    backgroundColor: market.momentum?.includes('YES') ? Colors.success + '20' : Colors.error + '20'
-                  }
-                ]}>
-                  <Text style={[
-                    styles.momentumText,
-                    {
-                      color: market.momentum?.includes('YES') ? Colors.success : Colors.error
-                    }
-                  ]}>
-                    {market.momentum_pct > 0 ? '+' : ''}{market.momentum_pct}%
-                  </Text>
-                </View>
-              </View>
-
-              <Text style={styles.trendingQuestion}>{market.market_question}</Text>
-            </View>
-          ))}
+        {/* Today's Picks */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Today's Picks</Text>
+          <Text style={styles.sectionSub}>AI-selected predictions with confidence scores</Text>
         </View>
-      )}
-    </ScrollView>
+
+        <View style={styles.pickList}>
+          {picks.length === 0 ? (
+            <View style={styles.empty}>
+              {Images.emptyState && (
+                <Image source={Images.emptyState} style={styles.emptyImg} resizeMode="contain" />
+              )}
+              <Text style={styles.emptyTitle}>Picks loading…</Text>
+              <Text style={styles.emptySub}>
+                Our AI is analysing markets and will have picks ready soon.
+              </Text>
+            </View>
+          ) : (
+            picks.map((pick, i) => (
+              <React.Fragment key={pick.id}>
+                <PickCard pick={pick} index={i} />
+                {/* Banner ad after 2nd pick for free users, native only */}
+                {i === 1 && !isPro && Platform.OS !== 'web' && (
+                  <BannerAdView unitId={AD_UNITS.banner} />
+                )}
+              </React.Fragment>
+            ))
+          )}
+        </View>
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
+
+/**
+ * BannerAdView — loads AdMob banner via lazy require (native only).
+ * Only rendered when Platform.OS !== 'web', so the require() is safe.
+ */
+function BannerAdView({ unitId }: { unitId: string }) {
+  const { BannerAd, BannerAdSize } = require('react-native-google-mobile-ads');
+  return (
+    <View style={{ alignItems: 'center', marginVertical: 8, backgroundColor: '#161625', borderRadius: 12, overflow: 'hidden' }}>
+      <BannerAd
+        unitId={unitId}
+        size={BannerAdSize.BANNER}
+        requestOptions={{ requestNonPersonalizedAdsOnly: false }}
+      />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  centerContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: Colors.background,
-  },
-  loadingText: {
-    marginTop: 16,
-    fontSize: 16,
-    color: Colors.textSecondary,
-  },
+  container: { flex: 1, backgroundColor: '#08080F' },
+  center:    { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#08080F' },
+  scroll:    { flex: 1 },
+
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 20,
-    paddingBottom: 10,
-  },
-  greeting: {
-    fontSize: 24,
-    fontWeight: '600',
-    color: Colors.textPrimary,
-  },
-  date: {
-    fontSize: 14,
-    color: Colors.textSecondary,
-    marginTop: 2,
-  },
-  accuracyBadge: {
-    backgroundColor: Colors.surface,
-    borderRadius: 12,
     paddingHorizontal: 16,
-    paddingVertical: 8,
-    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.06)',
+  },
+  logo: { width: 120, height: 34 },
+
+  accuracyPill: {
+    backgroundColor: '#00D4AA',
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+  },
+  accuracyPillText: { fontSize: 13, fontWeight: '700', color: '#08080F' },
+
+  trackCard: {
+    backgroundColor: '#161625',
+    margin: 16,
+    borderRadius: 16,
+    padding: 16,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: 'rgba(255,255,255,0.06)',
+    alignItems: 'center',
   },
-  accuracyTitle: {
-    fontSize: 12,
-    color: Colors.textSecondary,
-    fontWeight: '500',
-  },
-  accuracyScore: {
-    fontSize: 20,
+  trackLabel: {
+    fontSize: 11,
     fontWeight: '700',
-    color: Colors.success,
+    color: '#7A7A9A',
+    letterSpacing: 1.5,
+  },
+  trackSub: {
+    fontSize: 12,
+    color: '#7A7A9A',
     marginTop: 2,
-  },
-  accuracySubtext: {
-    fontSize: 10,
-    color: Colors.textSecondary,
-    marginTop: 2,
-  },
-  section: {
-    padding: 20,
-  },
-  sectionHeader: {
-    marginBottom: 16,
-  },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: Colors.textPrimary,
     marginBottom: 4,
   },
-  sectionSubtitle: {
-    fontSize: 14,
-    color: Colors.textSecondary,
+  trackNum: {
+    fontSize: 64,
+    fontWeight: '900',
+    color: '#00D4AA',
+    lineHeight: 72,
   },
-  emptyState: {
-    alignItems: 'center',
-    paddingVertical: 40,
+  trackSubNum: {
+    fontSize: 13,
+    color: '#7A7A9A',
+    marginTop: 4,
+    marginBottom: 12,
   },
-  emptyTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: Colors.textPrimary,
-    marginTop: 16,
+  trackDots: {
+    flexDirection: 'row',
+    gap: 5,
+    marginBottom: 12,
   },
-  emptySubtitle: {
-    fontSize: 14,
-    color: Colors.textSecondary,
+  trackDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+  },
+  trackFooter: {
+    fontSize: 11,
+    color: '#7A7A9A',
+    fontStyle: 'italic',
     textAlign: 'center',
-    marginTop: 8,
-    paddingHorizontal: 40,
   },
-  pickCard: {
-    backgroundColor: Colors.surface,
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  pickHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-    gap: 8,
-  },
-  pickIndex: {
-    backgroundColor: Colors.accent + '20',
-    borderRadius: 20,
-    width: 24,
-    height: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  pickIndexText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: Colors.accent,
-  },
-  confidenceContainer: {
-    flex: 1,
-  },
-  confidenceBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-    alignSelf: 'flex-start',
-  },
-  confidenceText: {
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  categoryBadge: {
-    backgroundColor: Colors.textSecondary + '20',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-  },
-  categoryText: {
-    fontSize: 12,
-    color: Colors.textSecondary,
-    fontWeight: '500',
-  },
-  pickQuestion: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: Colors.textPrimary,
-    marginBottom: 12,
-    lineHeight: 22,
-  },
-  recommendationContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-    gap: 12,
-  },
-  recommendationBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-  },
-  recommendationText: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  priceContainer: {
-    backgroundColor: Colors.textSecondary + '10',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-  },
-  priceText: {
-    fontSize: 12,
-    color: Colors.textSecondary,
-    fontWeight: '500',
-  },
-  smartMoneyBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 8,
-    marginBottom: 12,
-    gap: 6,
-  },
-  smartMoneyDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  smartMoneyText: {
-    fontSize: 12,
-    fontWeight: '500',
-  },
-  reasoningContainer: {
-    backgroundColor: Colors.background,
-    padding: 12,
-    borderRadius: 8,
-  },
-  reasoningLabel: {
-    fontSize: 12,
-    color: Colors.textSecondary,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  reasoningText: {
-    fontSize: 14,
-    color: Colors.textPrimary,
-    lineHeight: 20,
-  },
-  upgradeCTA: {
-    backgroundColor: Colors.accent + '10',
-    borderRadius: 12,
-    padding: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: 8,
-    borderWidth: 1,
-    borderColor: Colors.accent + '20',
-  },
-  upgradeContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  upgradeText: {
-    fontSize: 14,
-    color: Colors.accent,
-    fontWeight: '500',
-  },
-  trendingCard: {
-    backgroundColor: Colors.surface,
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  trendingHeader: {
-    marginBottom: 8,
-  },
-  momentumBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-    alignSelf: 'flex-start',
-  },
-  momentumText: {
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  trendingQuestion: {
-    fontSize: 14,
-    color: Colors.textPrimary,
-    lineHeight: 18,
-  },
+
+  section: { paddingHorizontal: 16, marginBottom: 8 },
+  sectionTitle: { fontSize: 20, fontWeight: '700', color: '#FFFFFF' },
+  sectionSub:   { fontSize: 13, color: '#7A7A9A', marginTop: 4 },
+
+  pickList: { paddingHorizontal: 16, paddingBottom: 32 },
+
+  empty:     { alignItems: 'center', paddingVertical: 64, gap: 10 },
+  emptyImg:  { width: 100, height: 100, opacity: 0.6 },
+  emptyTitle:{ fontSize: 18, fontWeight: '600', color: '#FFFFFF' },
+  emptySub:  { fontSize: 14, color: '#7A7A9A', textAlign: 'center', paddingHorizontal: 24 },
 });
