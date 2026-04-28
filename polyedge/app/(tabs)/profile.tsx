@@ -188,13 +188,13 @@ export default function ProfileScreen() {
       <SettingRow
         icon="shield-outline"
         label="Privacy Policy"
-        onPress={() => handleOpenLink('https://polyedge.app/privacy')}
+        onPress={() => handleOpenLink('https://michaelmcpheepb-oss.github.io/PolyEdge/privacy')}
       />
 
       <SettingRow
         icon="document-text-outline"
         label="Terms of Service"
-        onPress={() => handleOpenLink('https://polyedge.app/terms')}
+        onPress={() => handleOpenLink('https://michaelmcpheepb-oss.github.io/PolyEdge/privacy')}
       />
 
       {user && (

@@ -304,12 +304,12 @@ export default function SettingsScreen() {
           <Ionicons name="chevron-forward" size={20} color={Colors.textSecondary} />
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.row} onPress={() => handleOpenLink('https://polyedge.app/privacy')}>
+        <TouchableOpacity style={styles.row} onPress={() => handleOpenLink('https://michaelmcpheepb-oss.github.io/PolyEdge/privacy')}>
           <Text style={styles.rowLabel}>Privacy Policy</Text>
           <Ionicons name="chevron-forward" size={20} color={Colors.textSecondary} />
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.row} onPress={() => handleOpenLink('https://polyedge.app/terms')}>
+        <TouchableOpacity style={styles.row} onPress={() => handleOpenLink('https://michaelmcpheepb-oss.github.io/PolyEdge/privacy')}>
           <Text style={styles.rowLabel}>Terms of Service</Text>
           <Ionicons name="chevron-forward" size={20} color={Colors.textSecondary} />
         </TouchableOpacity>
@@ -318,6 +318,14 @@ export default function SettingsScreen() {
           <View style={styles.rowLeft}>
             <Ionicons name="logo-twitter" size={22} color={Colors.textPrimary} />
             <Text style={styles.rowLabel}>Follow us on X</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color={Colors.textSecondary} />
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.row} onPress={() => Linking.openURL('mailto:support@polyedge.app')}>
+          <View style={styles.rowLeft}>
+            <Ionicons name="mail-outline" size={22} color={Colors.textPrimary} />
+            <Text style={styles.rowLabel}>Contact Support</Text>
           </View>
           <Ionicons name="chevron-forward" size={20} color={Colors.textSecondary} />
         </TouchableOpacity>
