@@ -43,6 +43,7 @@
   },
   "devDependencies": {
     "@types/react": "~19.1.0",
+    "qrcode": "^1.5.4",
     "stripe": "^22.0.2",
     "typescript": "~5.9.2"
   },
