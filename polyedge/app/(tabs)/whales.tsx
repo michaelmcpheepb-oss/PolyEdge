@@ -13,6 +13,7 @@ import { TraderCard } from '../../components/TraderCard';
 import { useWhaleTrades } from '../../hooks/useWhaleTrades';
 import { useWhaleStore } from '../../stores/useWhaleStore';
 import { DEMO_WHALE_IDS } from '../../services/polymarket';
+import { useIsPro } from '../../hooks/useSubscription';
 
 type Tab = 'live' | 'top50';
 
@@ -52,7 +53,13 @@ export default function WhalesScreen() {
     && DEMO_WHALE_IDS.has(whaleTrades![0].id);
 
   const renderTrade = ({ item }: { item: any }) => (
-    <WhaleTradeRow trade={item} onPress={() => router.push(`/market/${item.market_id}`)} />
+    <WhaleTradeRow
+      trade={item}
+      onPress={() => router.push({
+        pathname: '/market/[id]',
+        params: { id: item.market_id, question: item.market_question },
+      })}
+    />
   );
 
   return (
@@ -146,6 +153,7 @@ export default function WhalesScreen() {
 
 function Top50View() {
   const router = useRouter();
+  const isPro = useIsPro();
   const [following, setFollowing] = useState<Set<string>>(new Set());
 
   // Placeholder data — in production this comes from Supabase top_traders
@@ -167,9 +175,11 @@ function Top50View() {
     });
   };
 
+  const displayTraders = isPro ? traders : traders.slice(0, 5);
+
   return (
     <FlatList
-      data={traders}
+      data={displayTraders}
       keyExtractor={(t) => t.wallet_address}
       contentContainerStyle={styles.listContent}
       showsVerticalScrollIndicator={false}
@@ -184,8 +194,26 @@ function Top50View() {
       ListHeaderComponent={
         <View style={styles.top50Header}>
           <Text style={styles.top50Title}>Top 50 Traders</Text>
-          <Text style={styles.top50Sub}>Ranked by 30-day PnL</Text>
+          {!isPro && <Text style={styles.top50Sub}>Showing top 5 · Full 50 with Pro</Text>}
+          {isPro && <Text style={styles.top50Sub}>Ranked by 30-day PnL</Text>}
         </View>
+      }
+      ListFooterComponent={
+        !isPro ? (
+          <View style={styles.upgradeFooterWhale}>
+            <Ionicons name="lock-closed" size={28} color="#00D4AA" />
+            <Text style={styles.upgradeTitleWhale}>Unlock Full Leaderboard</Text>
+            <Text style={styles.upgradeSubWhale}>
+              See all Top 50 traders, their complete PnL history, and real-time positions with PolyEdge Pro.
+            </Text>
+            <TouchableOpacity
+              style={styles.upgradeBtnWhale}
+              onPress={() => router.push('/pro')}
+            >
+              <Text style={styles.upgradeBtnTextWhale}>Go Pro</Text>
+            </TouchableOpacity>
+          </View>
+        ) : null
       }
     />
   );
@@ -249,4 +277,41 @@ const styles = StyleSheet.create({
   top50Header: { marginBottom: 12 },
   top50Title: { fontSize: 20, fontWeight: '700', color: '#FFFFFF' },
   top50Sub:   { fontSize: 13, color: '#7A7A9A', marginTop: 2 },
+
+  // ── Upgrade footer ──
+  upgradeFooterWhale: {
+    alignItems: 'center',
+    backgroundColor: '#161625',
+    borderRadius: 16,
+    padding: 28,
+    marginVertical: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(0,212,170,0.2)',
+  },
+  upgradeTitleWhale: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginTop: 12,
+  },
+  upgradeSubWhale: {
+    fontSize: 13,
+    color: '#A0A0B8',
+    textAlign: 'center',
+    lineHeight: 18,
+    marginTop: 6,
+    paddingHorizontal: 16,
+  },
+  upgradeBtnWhale: {
+    marginTop: 16,
+    backgroundColor: '#00D4AA',
+    paddingHorizontal: 32,
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  upgradeBtnTextWhale: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#08080F',
+  },
 });

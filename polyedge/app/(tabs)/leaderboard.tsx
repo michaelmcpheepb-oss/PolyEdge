@@ -1,69 +1,50 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, FlatList } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, FlatList, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/Colors';
+import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { TraderCard } from '../../components/TraderCard';
+import { createClient } from '@supabase/supabase-js';
+
+const supabase = createClient(
+  process.env.EXPO_PUBLIC_SUPABASE_URL!,
+  process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!
+);
 
 export default function LeaderboardScreen() {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<'top' | 'following'>('top');
   const [period, setPeriod] = useState<'7d' | '30d' | 'all'>('30d');
   const [showProGate, setShowProGate] = useState(false);
-  
-  // Mock traders data
-  const traders = [
-    {
-      wallet_address: '0x1234567890abcdef1234567890abcdef12345678',
-      pseudonym: 'CryptoWhale',
-      pnl_30d: 425000,
-      win_rate: 68,
-      total_trades: 1247,
-      active_positions: 12,
-      updated_at: '2026-04-21T12:00:00Z',
-    },
-    {
-      wallet_address: '0x234567890abcdef1234567890abcdef123456789',
-      pseudonym: 'PoliticalOracle',
-      pnl_30d: 210000,
-      win_rate: 72,
-      total_trades: 892,
-      active_positions: 8,
-      updated_at: '2026-04-21T12:00:00Z',
-    },
-    {
-      wallet_address: '0x34567890abcdef1234567890abcdef1234567890',
-      pseudonym: 'ETHMaxi',
-      pnl_30d: 185000,
-      win_rate: 61,
-      total_trades: 567,
-      active_positions: 5,
-      updated_at: '2026-04-21T12:00:00Z',
-    },
-    {
-      wallet_address: '0x4567890abcdef1234567890abcdef12345678901',
-      pseudonym: 'SportsBetPro',
-      pnl_30d: 142000,
-      win_rate: 65,
-      total_trades: 423,
-      active_positions: 6,
-      updated_at: '2026-04-21T12:00:00Z',
-    },
-    {
-      wallet_address: '0x567890abcdef1234567890abcdef123456789012',
-      pseudonym: 'TechTrader',
-      pnl_30d: 98000,
-      win_rate: 58,
-      total_trades: 312,
-      active_positions: 4,
-      updated_at: '2026-04-21T12:00:00Z',
-    },
-  ];
-  
-  const followingTraders = traders.slice(0, 2); // First 2 traders are being followed
-  
+  const [traders, setTraders] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadTraders();
+  }, []);
+
+  const loadTraders = async () => {
+    setLoading(true);
+    try {
+      const timeout = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('timeout')), 10000)
+      );
+      const query = supabase
+        .from('top_traders')
+        .select('*')
+        .order('win_rate', { ascending: false })
+        .limit(50);
+      const { data, error } = await Promise.race([query, timeout]) as any;
+      if (!error && data) setTraders(data);
+    } catch {}
+    setLoading(false);
+  };
+
+  const followingTraders: any[] = []; // Following tracked locally for now
+
   const handleFollowToggle = (walletAddress: string) => {
     console.log('Follow toggle for:', walletAddress);
-    // TODO: Update followed_traders table in Supabase
   };
   
   const renderTraderItem = ({ item, index }: { item: any; index: number }) => (
@@ -89,7 +70,7 @@ export default function LeaderboardScreen() {
           <TouchableOpacity 
             style={styles.goProButton}
             onPress={() => {
-              // Navigate to pro screen
+              router.push('/pro');
               setShowProGate(false);
             }}
           >
@@ -179,21 +160,25 @@ export default function LeaderboardScreen() {
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={
-          activeTab === 'following' ? (
+          loading ? (
+            <View style={styles.emptyState}>
+              <ActivityIndicator size="large" color={Colors.accent} />
+              <Text style={[styles.emptySubtitle, { marginTop: 16 }]}>Loading traders…</Text>
+            </View>
+          ) : activeTab === 'following' ? (
             <View style={styles.emptyState}>
               <Ionicons name="people-outline" size={64} color={Colors.textSecondary} />
               <Text style={styles.emptyTitle}>Not Following Anyone</Text>
-              <Text style={styles.emptySubtitle}>
-                Follow traders to see them here
-              </Text>
+              <Text style={styles.emptySubtitle}>Follow traders to see them here</Text>
             </View>
           ) : (
             <View style={styles.emptyState}>
               <Ionicons name="trophy-outline" size={64} color={Colors.textSecondary} />
-              <Text style={styles.emptyTitle}>No Traders Found</Text>
-              <Text style={styles.emptySubtitle}>
-                Try changing the period filter
-              </Text>
+              <Text style={styles.emptyTitle}>No Traders Yet</Text>
+              <Text style={styles.emptySubtitle}>Leaderboard data updates daily from Polymarket</Text>
+              <TouchableOpacity onPress={loadTraders} style={{ marginTop: 16, paddingHorizontal: 20, paddingVertical: 10, backgroundColor: Colors.accent, borderRadius: 10 }}>
+                <Text style={{ color: Colors.background, fontWeight: '700' }}>Refresh</Text>
+              </TouchableOpacity>
             </View>
           )
         }

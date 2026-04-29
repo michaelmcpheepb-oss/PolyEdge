@@ -1,16 +1,17 @@
 import type { Market } from '../types';
 
 export interface MarketAnalysis {
-  verdict:        'STRONG_BUY' | 'BUY' | 'NEUTRAL' | 'AVOID' | 'STRONG_AVOID';
-  confidence:     number;
-  ai_probability: number;
-  edge_pct:       number;
-  edge_label:     'UNDERVALUED' | 'OVERVALUED' | 'FAIR VALUE';
-  brief?:         string;
-  bullets:        string[];
-  kelly_pct:      number;
-  risk_level:     'LOW' | 'MEDIUM' | 'HIGH';
-  stake:          number;
+  verdict:              'STRONG_BUY' | 'BUY' | 'NEUTRAL' | 'AVOID' | 'STRONG_AVOID';
+  recommended_outcome?: 'YES' | 'NO';
+  confidence:           number;
+  ai_probability:       number;
+  edge_pct:             number;
+  edge_label:           'UNDERVALUED' | 'OVERVALUED' | 'FAIR VALUE';
+  brief?:               string;
+  bullets:              string[];
+  kelly_pct:            number;
+  risk_level:           'LOW' | 'MEDIUM' | 'HIGH';
+  stake:                number;
 }
 
 export async function generateMarketAnalysis(
@@ -21,38 +22,55 @@ export async function generateMarketAnalysis(
   const yes_pct = (market.yes_price ?? 0.5) * 100;
   const no_pct  = (market.no_price  ?? 0.5) * 100;
 
-  const systemPrompt = 'You are a quantitative prediction market analyst. Be extremely concise. Return exactly 3 bullet points. Each bullet MAX 8 words. No full sentences. Data-driven only.';
+  const systemPrompt = `You are an AI that analyses prediction markets and explains them in plain English for complete beginners who have never used a prediction market before. You must avoid all financial jargon. Write as if explaining to a curious friend, not a trader.`;
 
-  const userPrompt = `Analyse this market and return ONLY valid JSON with no other text.
+  const userPrompt = `Analyse this prediction market and return ONLY valid JSON with no other text.
 
-Market: ${market.question}
+Market question: ${market.question}
 Category: ${market.category ?? 'General'}
-Current YES price: ${yes_pct.toFixed(1)}%
+Current YES price: ${yes_pct.toFixed(1)}% (this means the market thinks there is a ${yes_pct.toFixed(1)}% chance of YES)
 Current NO price: ${no_pct.toFixed(1)}%
 24h volume: $${(market.volume_24h ?? 0).toLocaleString()}
 Total volume: $${(market.total_volume ?? 0).toLocaleString()}
 Ends: ${market.end_date}
-Smart money: ${smartMoneyPct ?? 50}% of top wallets going ${smartMoneyDirection ?? 'MIXED'}
+Top wallet activity: ${smartMoneyPct ?? 50}% of tracked top wallets are going ${smartMoneyDirection ?? 'MIXED'}
 
-Calculate:
-1. Your estimated true probability for YES
-2. Edge = your_probability - market_yes_price (as a percentage point)
-3. Kelly fraction = (p*(b+1)-1)/b where p=your_probability/100, b=(1/yes_price)-1
-4. Verdict based on edge magnitude and confidence
-5. Risk level: LOW if kelly>10, MEDIUM if kelly>3, HIGH if kelly<=3
+Your job:
+1. Estimate the TRUE probability that YES wins (as a percentage, 0-100)
+2. Compare your estimate to the current market price to find edge
+3. Decide if betting YES or NO offers good value
 
-Return this exact JSON structure:
+Rules for the bullets field — CRITICAL:
+- Write EXACTLY 2 plain English sentences that a beginner can understand
+- NO jargon. NO terms like "liquidity", "orderbook", "conviction", "Kelly", "momentum", "fade"
+- Each sentence must explain something genuinely useful about this market
+- Good examples:
+  "The YES and NO sides are evenly matched right now, so neither side has a clear advantage."
+  "Not many people are trading this market yet, which makes the price less reliable."
+  "The biggest traders on Polymarket are split — roughly half think YES, half think NO."
+  "Our AI thinks YES is more likely than the market price suggests, giving a potential edge."
+  "This market ends soon, so there is limited time for the price to move."
+- Bad examples (NEVER write these): "Tight spread with balanced orderbook", "Low volume indicates indecision", "Smart money shows mixed signals"
+
+Return this exact JSON:
 {
   "verdict": "STRONG_BUY|BUY|NEUTRAL|AVOID|STRONG_AVOID",
   "confidence": 0-100,
   "ai_probability": 0-100,
-  "edge_pct": number,
+  "edge_pct": number (your_probability minus market_yes_price, positive means YES is underpriced),
   "edge_label": "UNDERVALUED|OVERVALUED|FAIR VALUE",
-  "bullets": ["8 word max bullet", "second bullet max 8 words", "third max 8 words"],
+  "bullets": ["plain English sentence 1", "plain English sentence 2"],
   "kelly_pct": 0-25,
   "stake": 0-10,
   "risk_level": "LOW|MEDIUM|HIGH"
-}`;
+}
+
+Verdict rules (MUST follow edge direction — never contradict it):
+- edge_pct > 15 AND confidence > 60: "STRONG_BUY"
+- edge_pct > 5 AND confidence > 45: "BUY"
+- -5 <= edge_pct <= 5: "NEUTRAL"
+- edge_pct < -5 AND confidence > 45: "AVOID"
+- edge_pct < -15 AND confidence > 60: "STRONG_AVOID"`;
 
   const apiKey = process.env.EXPO_PUBLIC_DEEPSEEK_KEY;
   if (!apiKey) {
@@ -67,7 +85,7 @@ Return this exact JSON structure:
     },
     body: JSON.stringify({
       model: 'deepseek-chat',
-      max_tokens: 600,
+      max_tokens: 700,
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt },
@@ -90,7 +108,13 @@ Return this exact JSON structure:
   parsed.ai_probability = Math.max(0, Math.min(100, parsed.ai_probability ?? 50));
   parsed.kelly_pct      = Math.max(0, Math.min(25,  parsed.kelly_pct      ?? 0));
   parsed.stake          = Math.max(0, Math.min(10,  parsed.stake          ?? 0));
-  if (!parsed.bullets?.length) parsed.bullets = [];
+  if (!Array.isArray(parsed.bullets) || !parsed.bullets.length) parsed.bullets = [];
+
+  // Derive recommended_outcome from verdict — must never contradict edge
+  const bullish = parsed.verdict === 'STRONG_BUY' || parsed.verdict === 'BUY';
+  const bearish = parsed.verdict === 'STRONG_AVOID' || parsed.verdict === 'AVOID';
+  if (bullish)      parsed.recommended_outcome = 'YES';
+  else if (bearish) parsed.recommended_outcome = 'NO';
 
   return parsed;
 }

@@ -1,73 +1,48 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, FlatList } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, FlatList, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/Colors';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { WhaleTradeRow } from '../../components/WhaleTradeRow';
+import { createClient } from '@supabase/supabase-js';
+
+const supabase = createClient(
+  process.env.EXPO_PUBLIC_SUPABASE_URL!,
+  process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!
+);
 
 export default function TraderProfileScreen() {
   const { wallet } = useLocalSearchParams<{ wallet: string }>();
   const router = useRouter();
   const [isFollowing, setIsFollowing] = useState(false);
   const [activeTab, setActiveTab] = useState<'positions' | 'history'>('positions');
-  
-  // Mock trader data
-  const trader = {
-    wallet_address: wallet || '0x0000000000000000000000000000000000000000',
-    pseudonym: 'CryptoWhale',
-    pnl_30d: 425000,
-    win_rate: 68,
-    total_trades: 1247,
-    active_positions: 12,
-    updated_at: '2026-04-21T12:00:00Z',
-  };
-  
-  // Mock positions
-  const positions = [
-    {
-      id: '1',
-      market_id: '540816',
-      market_question: 'Russia-Ukraine Ceasefire before GTA VI?',
-      outcome: 'YES',
-      shares: 1500,
-      avg_price: 0.54,
-      current_price: 0.58,
-      pnl: 6000,
-    },
-    {
-      id: '2',
-      market_id: '540817',
-      market_question: 'New Rihanna Album before GTA VI?',
-      outcome: 'NO',
-      shares: 800,
-      avg_price: 0.42,
-      current_price: 0.38,
-      pnl: 3200,
-    },
-  ];
-  
-  // Mock trade history
-  const tradeHistory = [
-    {
-      id: '1',
-      market_id: '540816',
-      market_question: 'Russia-Ukraine Ceasefire before GTA VI?',
-      amount_usd: 125000,
-      outcome: 'YES',
-      side: 'BUY',
-      timestamp: '2026-04-21T11:30:00Z',
-    },
-    {
-      id: '2',
-      market_id: '540817',
-      market_question: 'New Rihanna Album before GTA VI?',
-      amount_usd: 75000,
-      outcome: 'NO',
-      side: 'SELL',
-      timestamp: '2026-04-21T10:15:00Z',
-    },
-  ];
+  const [trader, setTrader] = useState<any | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!wallet) return;
+    supabase
+      .from('top_traders')
+      .select('*')
+      .eq('wallet_address', wallet)
+      .limit(1)
+      .then(({ data }) => {
+        setTrader(data?.[0] ?? {
+          wallet_address: wallet,
+          pseudonym: `Trader ${wallet.slice(0, 6)}…${wallet.slice(-4)}`,
+          pnl_30d: 0,
+          win_rate: 0,
+          total_trades: 0,
+          active_positions: 0,
+        });
+        setLoading(false);
+      });
+  }, [wallet]);
+
+  // No hardcoded positions/history — real data would come from Polymarket CLOB
+  const positions: any[] = [];
+  const tradeHistory: any[] = [];
   
   const formatCurrency = (amount: number) => {
     if (amount >= 1000000) {
@@ -139,6 +114,47 @@ export default function TraderProfileScreen() {
       onPress={() => router.push(`/market/${item.market_id}`)}
     />
   );
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.container} edges={['top']}>
+        <View style={styles.header}>
+          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+            <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
+          </TouchableOpacity>
+          <View style={styles.headerTitle}>
+            <Text style={styles.headerTitleText}>Trader Profile</Text>
+          </View>
+          <View style={styles.headerRight} />
+        </View>
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <ActivityIndicator size="large" color={Colors.accent} />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (!trader) {
+    return (
+      <SafeAreaView style={styles.container} edges={['top']}>
+        <View style={styles.header}>
+          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+            <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
+          </TouchableOpacity>
+          <View style={styles.headerTitle}>
+            <Text style={styles.headerTitleText}>Trader Profile</Text>
+          </View>
+          <View style={styles.headerRight} />
+        </View>
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32 }}>
+          <Ionicons name="person-outline" size={64} color={Colors.textSecondary} />
+          <Text style={{ fontSize: 20, fontWeight: '700', color: Colors.textPrimary, marginTop: 16 }}>
+            Trader Not Found
+          </Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>

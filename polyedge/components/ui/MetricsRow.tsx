@@ -4,18 +4,10 @@ import { View, Text, StyleSheet } from 'react-native';
 interface MetricsRowProps {
   edge: number;
   confidence: number;
-  stake: number;
+  stake?: number; // kept for API compat but no longer rendered
 }
 
-function MetricBox({
-  value,
-  label,
-  color,
-}: {
-  value: string;
-  label: string;
-  color: string;
-}) {
+function MetricBox({ value, label, color }: { value: string; label: string; color: string }) {
   return (
     <View style={styles.box}>
       <Text style={[styles.value, { color }]}>{value}</Text>
@@ -24,15 +16,21 @@ function MetricBox({
   );
 }
 
-export function MetricsRow({ edge, confidence, stake }: MetricsRowProps) {
-  const edgeColor      = edge >= 0 ? '#00C07F' : '#FF4757';
-  const edgeStr        = edge >= 0 ? `+${edge.toFixed(1)}` : edge.toFixed(1);
+function confLabel(score: number) {
+  if (score >= 65) return 'HIGH';
+  if (score >= 45) return 'MEDIUM';
+  return 'LOW';
+}
+
+export function MetricsRow({ edge, confidence }: MetricsRowProps) {
+  const edgeColor = edge >= 0 ? '#00C07F' : '#FF4757';
+  const edgeStr   = edge >= 0 ? `+${edge.toFixed(1)}%` : `${edge.toFixed(1)}%`;
+  const confColor = confidence >= 65 ? '#00D4AA' : confidence >= 45 ? '#FFD700' : '#7A7A9A';
 
   return (
     <View style={styles.row}>
-      <MetricBox value={edgeStr}         label="Edge"       color={edgeColor} />
-      <MetricBox value={`${confidence}%`} label="Confidence" color="#00D4AA"  />
-      <MetricBox value={`${stake.toFixed(1)}`} label="Stake"  color="#FFFFFF" />
+      <MetricBox value={edgeStr}          label="Edge"       color={edgeColor} />
+      <MetricBox value={confLabel(confidence)} label="Confidence" color={confColor} />
     </View>
   );
 }

@@ -1,13 +1,36 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  Alert,
+  Animated,
+  Dimensions,
+  Platform,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors } from '../constants/Colors';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Image } from 'react-native';
+import { Images } from '../constants/Images';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { useState, useEffect } from 'react';
 import { openStripeCheckout } from '../services/stripe-new';
 import { useSubscription, useIsPro } from '../hooks/useSubscription';
 import { useUserStore } from '../stores/useUserStore';
 import { getMonetisationConfig, type MonetisationConfig } from '../services/geoMonetisation';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+
+const FEATURES = [
+  { icon: '✦', color: '#00D4AA', title: '5 AI picks every morning', limit: 'vs 3 free' },
+  { icon: '🐋', color: '#00D4AA', title: 'Real-time whale trade feed', limit: 'vs 1hr delay' },
+  { icon: '🏆', color: '#00D4AA', title: 'Full Top 50 trader leaderboard', limit: 'vs Top 5 only' },
+  { icon: '🔔', color: '#00D4AA', title: 'Unlimited price alerts', limit: 'vs 3 max' },
+  { icon: '⚡', color: '#F5A623', title: 'Unlimited AI market analysis', limit: 'vs 3/day' },
+  { icon: '🚫', color: '#FF6B6B', title: 'No interstitial ads', limit: 'Ad-free' },
+];
 
 export default function ProScreen() {
   const router = useRouter();
@@ -15,688 +38,627 @@ export default function ProScreen() {
   const [selectedPlan, setSelectedPlan] = useState<'weekly' | 'monthly'>('monthly');
   const [isProcessing, setIsProcessing] = useState(false);
   const [geoConfig, setGeoConfig] = useState<MonetisationConfig | null>(null);
+  const glowAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     getMonetisationConfig().then(setGeoConfig).catch(() => {});
   }, []);
-  
-  const { data: subscription, isLoading } = useSubscription();
+
+  // Glow animation loop
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(glowAnim, {
+          toValue: 1,
+          duration: 2500,
+          useNativeDriver: true,
+        }),
+        Animated.timing(glowAnim, {
+          toValue: 0,
+          duration: 2500,
+          useNativeDriver: true,
+        }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [glowAnim]);
+
+  const { isLoading } = useSubscription();
   const isPro = useIsPro();
-  
-  const proFeatures = [
-    {
-      icon: '🐋',
-      title: 'Real-time whale feed',
-      description: 'See whale trades as they happen with no delay',
-    },
-    {
-      icon: '📊',
-      title: 'Full trader leaderboard',
-      description: 'Access complete rankings and trader profiles',
-    },
-    {
-      icon: '🔔',
-      title: 'Unlimited price alerts',
-      description: 'Set as many alerts as you want on any market',
-    },
-    {
-      icon: '📈',
-      title: 'Advanced charts',
-      description: 'Detailed probability charts with historical data',
-    },
-    {
-      icon: '👑',
-      title: 'Pro badge',
-      description: 'Show your Pro status to other traders',
-    },
-    {
-      icon: '⚡',
-      title: 'Priority support',
-      description: 'Get help faster from our support team',
-    },
-  ];
-  
+
   const handleStartTrial = async () => {
     if (isPro) {
       Alert.alert('Already Pro', 'You already have an active Pro subscription!');
       return;
     }
-    
+
     if (!user) {
       Alert.alert('Sign In Required', 'Please sign in to start your free trial.');
       return;
     }
-    
+
     setIsProcessing(true);
-    
     try {
-      // Open Stripe checkout
       await openStripeCheckout(selectedPlan, user.id);
-      
-      // Show success message
       Alert.alert(
         'Checkout Started',
         'Complete your purchase in the browser window that opened.',
-        [
-          { 
-            text: 'OK', 
-            onPress: () => {
-              // Subscription status will be refreshed automatically
-              console.log('Checkout started');
-            }
-          }
-        ]
+        [{ text: 'OK', onPress: () => console.log('Checkout started') }],
       );
     } catch (error) {
       console.error('Checkout error:', error);
-      Alert.alert(
-        'Error',
-        'Something went wrong during checkout. Please try again.',
-        [{ text: 'OK' }]
-      );
+      Alert.alert('Error', 'Something went wrong. Please try again.', [{ text: 'OK' }]);
     } finally {
       setIsProcessing(false);
     }
   };
-  
+
   const handleRestorePurchase = () => {
     Alert.alert(
-      'Restore Purchase',
-      'This feature will be available when you set up your backend API.',
-      [{ text: 'OK' }]
+      'Checking subscription...',
+      'Please wait while we check your subscription status.',
+      [{ text: 'OK' }],
     );
   };
-  
+
+  const glowOpacity = glowAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.3, 0.8],
+  });
+
+  // ── Loading state ──────────────────────────────────────────────
   if (isLoading) {
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
-        <View style={styles.header}>
-          <TouchableOpacity 
-            style={styles.backButton}
-            onPress={() => router.back()}
-          >
-            <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
-          </TouchableOpacity>
-          <View style={styles.headerTitle}>
-            <Text style={styles.headerTitleText}>PolyEdge Pro</Text>
-          </View>
-          <View style={styles.headerRight} />
-        </View>
         <View style={styles.loadingContainer}>
           <Text style={styles.loadingText}>Loading...</Text>
         </View>
       </SafeAreaView>
     );
   }
-  
+
+  // ── Already Pro state ──────────────────────────────────────────
   if (isPro) {
     return (
-      <SafeAreaView style={styles.container} edges={['top']}>
-        <View style={styles.header}>
-          <TouchableOpacity 
-            style={styles.backButton}
-            onPress={() => router.back()}
-          >
-            <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
+      <LinearGradient colors={['#08080F', '#0F0F1A', '#08080F']} style={styles.container}>
+        <SafeAreaView edges={['top']} style={{ flex: 1 }}>
+          {/* Close */}
+          <TouchableOpacity style={styles.closeBtn} onPress={() => router.back()}>
+            <Ionicons name="close" size={24} color="#7A7A9A" />
           </TouchableOpacity>
-          <View style={styles.headerTitle}>
-            <Text style={styles.headerTitleText}>PolyEdge Pro</Text>
-          </View>
-          <View style={styles.headerRight} />
-        </View>
-        
-        <ScrollView 
-          style={styles.scrollView}
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.scrollContent}
-        >
+
           <View style={styles.proActiveSection}>
             <View style={styles.proBadge}>
-              <Ionicons name="sparkles" size={48} color={Colors.accent} />
+              <Ionicons name="sparkles" size={48} color="#00D4AA" />
             </View>
             <Text style={styles.proActiveTitle}>You're a Pro! 🎉</Text>
-            <Text style={styles.proActiveSubtitle}>
-              Thank you for subscribing to PolyEdge Pro
-            </Text>
-            
-            <View style={styles.activeFeatures}>
-              <Text style={styles.activeFeaturesTitle}>Your Pro Features:</Text>
-              {proFeatures.map((feature, index) => (
-                <View key={index} style={styles.activeFeatureItem}>
-                  <Text style={styles.activeFeatureIcon}>{feature.icon}</Text>
-                  <View style={styles.activeFeatureText}>
-                    <Text style={styles.activeFeatureTitle}>{feature.title}</Text>
-                    <Text style={styles.activeFeatureDescription}>{feature.description}</Text>
-                  </View>
-                  <Ionicons name="checkmark-circle" size={24} color={Colors.success} />
+            <Text style={styles.proActiveSubtitle}>Thank you for subscribing to PolyEdge Pro</Text>
+
+            {FEATURES.map((f, i) => (
+              <View key={i} style={styles.featureRowPro}>
+                <Text style={[styles.featureIconPro, { color: f.color }]}>{f.icon}</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.featureTitlePro}>{f.title}</Text>
                 </View>
-              ))}
-            </View>
-            
-            <TouchableOpacity 
-              style={styles.manageSubscriptionButton}
-              onPress={() => {
-                Alert.alert(
-                  'Manage Subscription',
-                  'You can manage your subscription through the customer portal.',
-                  [{ text: 'OK' }]
-                );
-              }}
-            >
-              <Text style={styles.manageSubscriptionText}>Manage Subscription</Text>
+                <Ionicons name="checkmark-circle" size={20} color="#00D4AA" />
+              </View>
+            ))}
+
+            <TouchableOpacity style={styles.manageBtn} onPress={() => Alert.alert('Manage Subscription', 'Manage via customer portal.')}>
+              <Text style={styles.manageBtnText}>Manage Subscription</Text>
             </TouchableOpacity>
           </View>
-        </ScrollView>
-      </SafeAreaView>
+        </SafeAreaView>
+      </LinearGradient>
     );
   }
 
-  // ── Tier 3 — PolyEdge is free in your region ─────────────────────────────────
+  // ── Tier 3 — PolyEdge is free in your region ───────────────────
   if (geoConfig?.tier === 3) {
     return (
-      <SafeAreaView style={styles.container} edges={['top']}>
-        <View style={styles.header}>
-          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-            <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
+      <LinearGradient colors={['#08080F', '#0F0F1A', '#08080F']} style={styles.container}>
+        <SafeAreaView edges={['top']} style={{ flex: 1 }}>
+          <TouchableOpacity style={styles.closeBtn} onPress={() => router.back()}>
+            <Ionicons name="close" size={24} color="#7A7A9A" />
           </TouchableOpacity>
-          <View style={styles.headerTitle}>
-            <Text style={styles.headerTitleText}>PolyEdge</Text>
+
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 32 }}>
+            <Text style={{ fontSize: 72, marginBottom: 16 }}>✅</Text>
+            <Text style={styles.freeTitle}>PolyEdge is free in your region</Text>
+            <Text style={styles.freeSubtitle}>
+              Enjoy unlimited AI analyses.{'\n'}We show brief ads to keep the service free.
+            </Text>
+            <TouchableOpacity
+              style={styles.backBtn}
+              onPress={() => router.back()}
+            >
+              <Text style={styles.backBtnText}>Back to Markets</Text>
+            </TouchableOpacity>
           </View>
-          <View style={styles.headerRight} />
-        </View>
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32, gap: 16 }}>
-          <Text style={{ fontSize: 64 }}>✅</Text>
-          <Text style={{ fontSize: 24, fontWeight: '800', color: '#FFFFFF', textAlign: 'center' }}>
-            PolyEdge is free for you
-          </Text>
-          <Text style={{ fontSize: 15, color: '#A0A0B8', textAlign: 'center', lineHeight: 22 }}>
-            Enjoy unlimited AI analyses supported by ads.{'\n'}
-            No subscription needed in your region.
-          </Text>
-          <TouchableOpacity
-            style={{ marginTop: 16, backgroundColor: '#00D4AA', borderRadius: 12, paddingHorizontal: 28, paddingVertical: 14 }}
-            onPress={() => router.back()}
-          >
-            <Text style={{ fontSize: 16, fontWeight: '700', color: '#08080F' }}>Back to Markets</Text>
-          </TouchableOpacity>
-        </View>
-      </SafeAreaView>
+        </SafeAreaView>
+      </LinearGradient>
     );
   }
 
-  // Dynamic monthly price based on geo tier
+  // ── Dynamic price ──────────────────────────────────────────────
   const monthlyPrice = geoConfig?.proPriceMonthly ?? '€9.99';
+  const isTier2 = geoConfig?.tier === 2;
+  const displayMonthlyPrice = isTier2 ? '€4.99' : monthlyPrice;
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => router.back()}
-        >
-          <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
+    <LinearGradient colors={['#08080F', '#0F0F1A', '#08080F']} style={styles.container}>
+      <SafeAreaView edges={['top']} style={{ flex: 1 }}>
+        {/* Close */}
+        <TouchableOpacity style={styles.closeBtn} onPress={() => router.back()}>
+          <Ionicons name="close" size={24} color="#7A7A9A" />
         </TouchableOpacity>
-        <View style={styles.headerTitle}>
-          <Text style={styles.headerTitleText}>PolyEdge Pro</Text>
-        </View>
-        <View style={styles.headerRight} />
-      </View>
-      
-      <ScrollView 
-        style={styles.scrollView}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
-      >
-        {/* Hero Section */}
-        <View style={styles.heroSection}>
-          <View style={styles.sparkleContainer}>
-            <Ionicons name="sparkles" size={48} color={Colors.accent} />
+
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
+          bounces={false}
+        >
+          {/* ── HERO ───────────────────────────────────────────── */}
+          <View style={styles.heroSection}>
+            {/* Hero image — Image component removes source on error so it falls back gracefully */}
+            <View style={styles.heroCard}>
+              <Image
+                source={Images.heroPaywall}
+                style={styles.heroCardImage}
+                resizeMode="cover"
+              />
+              <Animated.View style={[styles.glowRing, { opacity: glowOpacity }]} />
+              <Text style={styles.heroEmoji}>🔮</Text>
+            </View>
+
+            <Text style={styles.heroTitle}>Unlock PolyEdge Pro</Text>
+            <Text style={styles.heroSubtitle}>
+              The smartest money on Polymarket.{'\n'}Now in your pocket.
+            </Text>
           </View>
-          <Text style={styles.heroTitle}>Upgrade to Pro</Text>
-          <Text style={styles.heroSubtitle}>
-            Get the complete Polymarket analytics experience
-          </Text>
-        </View>
-        
-        {/* Features Grid */}
-        <View style={styles.featuresSection}>
-          <Text style={styles.sectionTitle}>Pro Features</Text>
-          <View style={styles.featuresGrid}>
-            {proFeatures.map((feature, index) => (
-              <View key={index} style={styles.featureCard}>
-                <Text style={styles.featureIcon}>{feature.icon}</Text>
-                <Text style={styles.featureTitle}>{feature.title}</Text>
-                <Text style={styles.featureDescription}>{feature.description}</Text>
+
+          {/* ── FEATURES LIST ──────────────────────────────────── */}
+          <View style={styles.featuresSection}>
+            {FEATURES.map((f, i) => (
+              <View key={i} style={styles.featureRow}>
+                <Text style={[styles.featureIcon, { color: f.color }]}>{f.icon}</Text>
+                <Text style={styles.featureTitle}>{f.title}</Text>
+                <Text style={styles.featureLimit}>{f.limit}</Text>
               </View>
             ))}
           </View>
-        </View>
-        
-        {/* Pricing Section */}
-        <View style={styles.pricingSection}>
-          <Text style={styles.sectionTitle}>Choose Your Plan</Text>
-          
-          <View style={styles.pricingCards}>
-            {/* Weekly Plan */}
-            <TouchableOpacity 
-              style={[
-                styles.pricingCard,
-                selectedPlan === 'weekly' && styles.selectedPricingCard
-              ]}
-              onPress={() => setSelectedPlan('weekly')}
-            >
-              <View style={styles.pricingCardHeader}>
-                <Text style={styles.pricingPlan}>Weekly</Text>
-                <View style={styles.bestForBadge}>
-                  <Text style={styles.bestForBadgeText}>Best for trying out</Text>
-                </View>
-                {selectedPlan === 'weekly' && (
-                  <View style={styles.selectedBadge}>
-                    <Ionicons name="checkmark" size={16} color={Colors.background} />
+
+          {/* ── PRICING TOGGLE ──────────────────────────────────── */}
+          <View style={styles.pricingSection}>
+            <View style={styles.pricingToggle}>
+              {/* Weekly */}
+              <TouchableOpacity
+                style={[
+                  styles.pricingPill,
+                  selectedPlan === 'weekly' && styles.pricingPillSelected,
+                ]}
+                onPress={() => setSelectedPlan('weekly')}
+              >
+                <Text style={[styles.pillLabel, selectedPlan === 'weekly' && styles.pillLabelSelected]}>
+                  Weekly
+                </Text>
+              </TouchableOpacity>
+
+              {/* Monthly */}
+              <TouchableOpacity
+                style={[
+                  styles.pricingPill,
+                  selectedPlan === 'monthly' && styles.pricingPillSelected,
+                ]}
+                onPress={() => setSelectedPlan('monthly')}
+              >
+                {selectedPlan !== 'monthly' && (
+                  <View style={styles.bestValueBadge}>
+                    <Text style={styles.bestValueText}>BEST VALUE</Text>
                   </View>
                 )}
-              </View>
-              <Text style={styles.pricingPrice}>€2.50</Text>
-              <Text style={styles.pricingPeriod}>/week</Text>
-              <Text style={styles.pricingDescription}>
-                Perfect for testing the waters
-              </Text>
-            </TouchableOpacity>
-            
-            {/* Monthly Plan */}
-            <TouchableOpacity 
-              style={[
-                styles.pricingCard,
-                selectedPlan === 'monthly' && styles.selectedPricingCard,
-                styles.monthlyCard,
-              ]}
-              onPress={() => setSelectedPlan('monthly')}
+                <Text style={[styles.pillLabel, selectedPlan === 'monthly' && styles.pillLabelSelected]}>
+                  Monthly
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Price Display */}
+            <View style={styles.priceDisplay}>
+              {selectedPlan === 'weekly' ? (
+                <>
+                  <Text style={styles.priceAmount}>€2.50</Text>
+                  <Text style={styles.pricePeriod}>/ week</Text>
+                </>
+              ) : (
+                <>
+                  <Text style={styles.priceAmount}>{displayMonthlyPrice}</Text>
+                  <Text style={styles.pricePeriod}>/ month</Text>
+                </>
+              )}
+            </View>
+            <Text style={styles.priceNote}>
+              {selectedPlan === 'weekly' ? 'Cancel anytime' : 'Save 20% vs weekly'}
+            </Text>
+          </View>
+
+          {/* ── CTA ─────────────────────────────────────────────── */}
+          <TouchableOpacity
+            style={styles.ctaBtn}
+            onPress={handleStartTrial}
+            disabled={isProcessing}
+            activeOpacity={0.85}
+          >
+            <LinearGradient
+              colors={['#00D4AA', '#0099CC']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.ctaGradient}
             >
-              <View style={styles.pricingCardHeader}>
-                <Text style={styles.pricingPlan}>Monthly</Text>
-                <View style={styles.popularBadge}>
-                  <Text style={styles.popularBadgeText}>Most Popular</Text>
-                </View>
-                {selectedPlan === 'monthly' && (
-                  <View style={styles.selectedBadge}>
-                    <Ionicons name="checkmark" size={16} color={Colors.background} />
-                  </View>
-                )}
-              </View>
-              <Text style={styles.pricingPrice}>{monthlyPrice}</Text>
-              <Text style={styles.pricingPeriod}>/month</Text>
-              <Text style={styles.pricingDescription}>
-                Best value for active traders
+              <Text style={styles.ctaText}>
+                {isProcessing ? 'Processing...' : 'Start 7-Day Free Trial'}
               </Text>
-            </TouchableOpacity>
+            </LinearGradient>
+          </TouchableOpacity>
+          <Text style={styles.ctaSub}>
+            Then {displayMonthlyPrice}/month · Cancel anytime
+          </Text>
+
+          {/* ── TRUST ROW ───────────────────────────────────────── */}
+          <View style={styles.trustRow}>
+            <View style={styles.trustItem}>
+              <Text style={styles.trustIcon}>🔒</Text>
+              <Text style={styles.trustLabel}>Secure payment</Text>
+            </View>
+            <View style={styles.trustItem}>
+              <Text style={styles.trustIcon}>⭐</Text>
+              <Text style={styles.trustLabel}>Cancel anytime</Text>
+            </View>
+            <View style={styles.trustItem}>
+              <Text style={styles.trustIcon}>💳</Text>
+              <Text style={styles.trustLabel}>No hidden fees</Text>
+            </View>
           </View>
-          
-          {/* Trial notes */}
-          <View style={styles.trialNotes}>
-            <View style={styles.trialNoteRow}>
-              <Ionicons name="checkmark" size={16} color="#27AE60" />
-              <Text style={styles.trialNoteText}>7-day free trial included</Text>
-            </View>
-            <View style={styles.trialNoteRow}>
-              <Ionicons name="checkmark" size={16} color="#27AE60" />
-              <Text style={styles.trialNoteText}>Cancel anytime</Text>
-            </View>
-            <View style={styles.trialNoteRow}>
-              <Ionicons name="checkmark" size={16} color="#27AE60" />
-              <Text style={styles.trialNoteText}>No commitment</Text>
-            </View>
-          </View>
-        </View>
-        
-        {/* Legal Text */}
-        <Text style={styles.legalText}>
-          Subscription auto-renews. Cancel anytime. By subscribing, you agree to our Terms of Service and Privacy Policy.
-        </Text>
-      </ScrollView>
-      
-      {/* CTA Button */}
-      <View style={styles.bottomBar}>
-        <TouchableOpacity 
-          style={[styles.ctaButton, isProcessing && styles.ctaButtonDisabled]}
-          onPress={handleStartTrial}
-          disabled={isProcessing}
-        >
-          {isProcessing ? (
-            <>
-              <Ionicons name="time" size={20} color={Colors.background} />
-              <Text style={styles.ctaButtonText}>Processing...</Text>
-            </>
-          ) : (
-            <>
-              <Ionicons name="flash" size={20} color={Colors.background} />
-              <Text style={styles.ctaButtonText}>Start 7-Day Free Trial</Text>
-            </>
-          )}
-        </TouchableOpacity>
-        
-        <TouchableOpacity 
-          style={styles.restoreButton}
-          onPress={handleRestorePurchase}
-        >
-          <Text style={styles.restoreButtonText}>Restore Purchase</Text>
-        </TouchableOpacity>
-      </View>
-    </SafeAreaView>
+
+          {/* ── RESTORE ─────────────────────────────────────────── */}
+          <TouchableOpacity onPress={handleRestorePurchase} style={styles.restoreBtn}>
+            <Text style={styles.restoreText}>Restore purchase</Text>
+          </TouchableOpacity>
+
+          {/* ── LEGAL ───────────────────────────────────────────── */}
+          <Text style={styles.legalText}>
+            Payment processed by Stripe. Subscription auto-renews monthly. Cancel anytime in Profile settings.
+          </Text>
+        </ScrollView>
+      </SafeAreaView>
+    </LinearGradient>
   );
 }
+
+// ══════════════════════════════════════════════════════════════════
+//  STYLES
+// ══════════════════════════════════════════════════════════════════
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
   },
-  header: {
-    flexDirection: 'row',
+  closeBtn: {
+    position: 'absolute',
+    top: Platform.OS === 'ios' ? 8 : 12,
+    right: 16,
+    zIndex: 100,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: Colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-  },
-  backButton: {
-    padding: 4,
-  },
-  headerTitle: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  headerTitleText: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: Colors.textPrimary,
-  },
-  headerRight: {
-    width: 32,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: '#08080F',
   },
   loadingText: {
     fontSize: 16,
-    color: Colors.textSecondary,
-  },
-  scrollView: {
-    flex: 1,
+    color: '#A0A0B8',
   },
   scrollContent: {
-    paddingBottom: 120,
+    paddingBottom: 60,
   },
+
+  // ── Hero ──
   heroSection: {
     alignItems: 'center',
-    padding: 32,
-    backgroundColor: Colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
+    paddingTop: 60,
+    paddingBottom: 20,
+    paddingHorizontal: 24,
   },
-  sparkleContainer: {
-    marginBottom: 16,
+  heroCard: {
+    width: SCREEN_WIDTH - 48,
+    height: 200,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'hidden',
+    marginBottom: 24,
+    backgroundColor: '#1A1A2E',
+  },
+  heroCardImage: {
+    position: 'absolute',
+    width: '100%',
+    height: '100%',
+  },
+  glowRing: {
+    position: 'absolute',
+    width: 160,
+    height: 160,
+    borderRadius: 80,
+    backgroundColor: 'rgba(0, 212, 170, 0.15)',
+  },
+  heroEmoji: {
+    fontSize: 80,
   },
   heroTitle: {
-    fontSize: 32,
-    fontWeight: '700',
-    color: Colors.accent,
-    marginBottom: 8,
+    fontSize: 28,
+    fontWeight: '900',
+    color: '#FFFFFF',
+    textAlign: 'center',
   },
   heroSubtitle: {
     fontSize: 16,
-    color: Colors.textSecondary,
+    color: '#A0A0B8',
     textAlign: 'center',
-  },
-  featuresSection: {
-    padding: 24,
-    backgroundColor: Colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-  },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: Colors.textPrimary,
-    marginBottom: 16,
-  },
-  featuresGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 16,
-  },
-  featureCard: {
-    width: '48%',
-    backgroundColor: Colors.elevated,
-    borderRadius: 12,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  featureIcon: {
-    fontSize: 24,
-    marginBottom: 8,
-  },
-  featureTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: Colors.textPrimary,
-    marginBottom: 4,
-  },
-  featureDescription: {
-    fontSize: 12,
-    color: Colors.textSecondary,
-    lineHeight: 16,
-  },
-  pricingSection: {
-    padding: 24,
-    backgroundColor: Colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-  },
-  pricingCards: {
-    gap: 16,
-  },
-  pricingCard: {
-    backgroundColor: Colors.elevated,
-    borderRadius: 16,
-    padding: 20,
-    borderWidth: 2,
-    borderColor: Colors.border,
-  },
-  selectedPricingCard: {
-    borderColor: Colors.accent,
-    backgroundColor: Colors.accent + '10',
-  },
-  yearlyCard: {
-    borderColor: Colors.accent,
-  },
-  pricingCardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  pricingPlan: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: Colors.textPrimary,
-  },
-  bestForBadge: {
-    backgroundColor: Colors.elevated,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 4,
-  },
-  bestForBadgeText: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: Colors.textSecondary,
-  },
-  popularBadge: {
-    backgroundColor: Colors.accent,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 4,
-  },
-  popularBadgeText: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: Colors.background,
-  },
-  trialNotes: {
-    marginTop: 16,
-    gap: 8,
-  },
-  trialNoteRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  trialNoteText: {
-    fontSize: 13,
-    color: '#27AE60',
-  },
-  selectedBadge: {
-    backgroundColor: Colors.accent,
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  pricingPrice: {
-    fontSize: 36,
-    fontWeight: '700',
-    color: Colors.textPrimary,
-    marginBottom: 4,
-  },
-  pricingPeriod: {
-    fontSize: 14,
-    color: Colors.textSecondary,
-    marginBottom: 8,
-  },
-  pricingDescription: {
-    fontSize: 14,
-    color: Colors.textSecondary,
-  },
-  monthlyCard: {
-    borderColor: Colors.accent,
+    lineHeight: 24,
+    marginTop: 8,
   },
 
-  legalText: {
-    fontSize: 12,
-    color: Colors.textTertiary,
-    textAlign: 'center',
-    lineHeight: 16,
-    paddingHorizontal: 32,
-    paddingTop: 16,
+  // ── Features ──
+  featuresSection: {
+    marginHorizontal: 24,
+    marginTop: 12,
+    borderRadius: 16,
+    backgroundColor: '#161625',
+    overflow: 'hidden',
   },
-  bottomBar: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    padding: 16,
-    backgroundColor: Colors.surface,
-    borderTopWidth: 1,
-    borderTopColor: Colors.border,
+  featureRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#2A2A45',
+  },
+  featureIcon: {
+    fontSize: 18,
+    marginRight: 12,
+    width: 24,
+    textAlign: 'center',
+  },
+  featureTitle: {
+    flex: 1,
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  featureLimit: {
+    fontSize: 13,
+    color: '#7A7A9A',
+  },
+
+  // ── Pricing ──
+  pricingSection: {
+    marginHorizontal: 24,
+    marginTop: 24,
     alignItems: 'center',
   },
-  ctaButton: {
-    backgroundColor: Colors.accent,
-    width: '100%',
-    paddingVertical: 18,
-    borderRadius: 12,
+  pricingToggle: {
     flexDirection: 'row',
+    backgroundColor: '#161625',
+    borderRadius: 12,
+    padding: 4,
+  },
+  pricingPill: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#161625',
+  },
+  pricingPillSelected: {
+    backgroundColor: '#00D4AA',
+  },
+  pillLabel: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#7A7A9A',
+  },
+  pillLabelSelected: {
+    color: '#08080F',
+  },
+  bestValueBadge: {
+    position: 'absolute',
+    top: -10,
+    backgroundColor: '#00D4AA',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
+  },
+  bestValueText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#08080F',
+  },
+  priceDisplay: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    marginTop: 20,
+  },
+  priceAmount: {
+    fontSize: 40,
+    fontWeight: '900',
+    color: '#FFFFFF',
+  },
+  pricePeriod: {
+    fontSize: 16,
+    color: '#A0A0B8',
+    marginLeft: 4,
+  },
+  priceNote: {
+    fontSize: 13,
+    color: '#7A7A9A',
+    marginTop: 6,
+  },
+
+  // ── CTA ──
+  ctaBtn: {
+    marginHorizontal: 24,
+    marginTop: 20,
+    height: 56,
+    borderRadius: 16,
+    overflow: 'hidden',
+  },
+  ctaGradient: {
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    gap: 8,
-    marginBottom: 12,
   },
-  ctaButtonDisabled: {
-    opacity: 0.7,
-  },
-  ctaButtonText: {
+  ctaText: {
     fontSize: 18,
-    fontWeight: '700',
-    color: Colors.background,
+    fontWeight: '800',
+    color: '#08080F',
   },
-  restoreButton: {
+  ctaSub: {
+    fontSize: 12,
+    color: '#7A7A9A',
+    textAlign: 'center',
+    marginTop: 8,
+  },
+
+  // ── Trust Row ──
+  trustRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 24,
+    marginTop: 20,
+  },
+  trustItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  trustIcon: {
+    fontSize: 11,
+  },
+  trustLabel: {
+    fontSize: 11,
+    color: '#7A7A9A',
+  },
+
+  // ── Restore ──
+  restoreBtn: {
+    marginTop: 12,
     padding: 12,
   },
-  restoreButtonText: {
-    fontSize: 14,
-    color: Colors.textSecondary,
+  restoreText: {
+    fontSize: 12,
+    color: '#00D4AA',
+    textDecorationLine: 'underline',
+    textAlign: 'center',
   },
+
+  // ── Legal ──
+  legalText: {
+    fontSize: 10,
+    color: '#404058',
+    textAlign: 'center',
+    marginHorizontal: 32,
+    marginTop: 12,
+    lineHeight: 14,
+  },
+
+  // ── Already Pro ──
   proActiveSection: {
+    flex: 1,
     alignItems: 'center',
-    padding: 32,
+    paddingHorizontal: 24,
+    paddingTop: 60,
   },
   proBadge: {
     marginBottom: 16,
   },
   proActiveTitle: {
-    fontSize: 32,
-    fontWeight: '700',
-    color: Colors.accent,
+    fontSize: 28,
+    fontWeight: '900',
+    color: '#00D4AA',
     marginBottom: 8,
   },
   proActiveSubtitle: {
-    fontSize: 16,
-    color: Colors.textSecondary,
+    fontSize: 15,
+    color: '#A0A0B8',
     textAlign: 'center',
-    marginBottom: 32,
+    marginBottom: 24,
   },
-  activeFeatures: {
-    width: '100%',
-    marginBottom: 32,
-  },
-  activeFeaturesTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: Colors.textPrimary,
-    marginBottom: 16,
-  },
-  activeFeatureItem: {
+  featureRowPro: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.elevated,
+    backgroundColor: '#161625',
     borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: Colors.border,
+    padding: 14,
+    marginBottom: 10,
+    width: '100%',
   },
-  activeFeatureIcon: {
-    fontSize: 24,
+  featureIconPro: {
+    fontSize: 18,
     marginRight: 12,
   },
-  activeFeatureText: {
-    flex: 1,
-  },
-  activeFeatureTitle: {
+  featureTitlePro: {
     fontSize: 14,
     fontWeight: '600',
-    color: Colors.textPrimary,
-    marginBottom: 4,
+    color: '#FFFFFF',
   },
-  activeFeatureDescription: {
-    fontSize: 12,
-    color: Colors.textSecondary,
-    lineHeight: 16,
-  },
-  manageSubscriptionButton: {
-    backgroundColor: Colors.accent,
+  manageBtn: {
+    backgroundColor: '#00D4AA',
     paddingHorizontal: 32,
-    paddingVertical: 16,
+    paddingVertical: 14,
     borderRadius: 24,
+    marginTop: 24,
   },
-  manageSubscriptionText: {
+  manageBtnText: {
     fontSize: 16,
     fontWeight: '700',
-    color: Colors.background,
+    color: '#08080F',
+  },
+
+  // ── Free region ──
+  freeTitle: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    textAlign: 'center',
+  },
+  freeSubtitle: {
+    fontSize: 15,
+    color: '#A0A0B8',
+    textAlign: 'center',
+    lineHeight: 22,
+    marginTop: 12,
+  },
+  backBtn: {
+    marginTop: 24,
+    backgroundColor: '#00D4AA',
+    borderRadius: 12,
+    paddingHorizontal: 28,
+    paddingVertical: 14,
+  },
+  backBtnText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#08080F',
   },
 });

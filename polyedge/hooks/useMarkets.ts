@@ -44,14 +44,14 @@ export function useInfiniteMarkets(options?: {
   });
 }
 
-export function useMarket(marketId: string | undefined) {
+export function useMarket(marketId: string | undefined, question?: string) {
   return useQuery({
-    queryKey: ['market', marketId],
+    queryKey: ['market', marketId, question],
     queryFn: () => {
       if (!marketId) {
         throw new Error('Market ID is required');
       }
-      return getMarketById(marketId);
+      return getMarketById(marketId, question);
     },
     enabled: !!marketId,
     staleTime: 2 * 60 * 1000, // 2 minutes

@@ -76,56 +76,11 @@ export default function RootLayout() {
           <StatusBar style="light" backgroundColor={Colors.background} />
           <Stack screenOptions={{ headerShown: false }}>
             <Stack.Screen name="(tabs)" />
-            <Stack.Screen
-              name="market/[id]"
-              options={{
-                presentation: 'modal',
-                headerShown: true,
-                headerTitle: 'Market Details',
-                headerStyle: { backgroundColor: Colors.surface },
-                headerTintColor: Colors.textPrimary,
-              }}
-            />
-            <Stack.Screen
-              name="trader/[wallet]"
-              options={{
-                presentation: 'modal',
-                headerShown: true,
-                headerTitle: 'Trader Profile',
-                headerStyle: { backgroundColor: Colors.surface },
-                headerTintColor: Colors.textPrimary,
-              }}
-            />
-            <Stack.Screen
-              name="alerts/create"
-              options={{
-                presentation: 'modal',
-                headerShown: true,
-                headerTitle: 'Create Alert',
-                headerStyle: { backgroundColor: Colors.surface },
-                headerTintColor: Colors.textPrimary,
-              }}
-            />
-            <Stack.Screen
-              name="pro"
-              options={{
-                presentation: 'modal',
-                headerShown: true,
-                headerTitle: 'Go Pro',
-                headerStyle: { backgroundColor: Colors.surface },
-                headerTintColor: Colors.textPrimary,
-              }}
-            />
-            <Stack.Screen
-              name="settings"
-              options={{
-                presentation: 'modal',
-                headerShown: true,
-                headerTitle: 'Settings',
-                headerStyle: { backgroundColor: Colors.surface },
-                headerTintColor: Colors.textPrimary,
-              }}
-            />
+            <Stack.Screen name="market/[id]"    options={{ headerShown: false }} />
+            <Stack.Screen name="trader/[wallet]" options={{ headerShown: false }} />
+            <Stack.Screen name="alerts/create"   options={{ headerShown: false }} />
+            <Stack.Screen name="pro"             options={{ headerShown: false }} />
+            <Stack.Screen name="settings"        options={{ headerShown: false }} />
             <Stack.Screen
               name="onboarding"
               options={{ presentation: 'fullScreenModal', headerShown: false }}

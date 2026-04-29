@@ -31,14 +31,14 @@ const fmtDate = (s: string) => {
 type AnalysisState = 'idle' | 'loading' | 'done' | 'error';
 
 export default function MarketDetailScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, question } = useLocalSearchParams<{ id: string; question?: string }>();
   const router  = useRouter();
   const [chartRange, setChartRange] = useState<'7d' | '30d' | 'all'>('7d');
   const [analysisState, setAnalysisState] = useState<AnalysisState>('idle');
   const [analysis, setAnalysis] = useState<MarketAnalysis | null>(null);
   const [analysisError, setAnalysisError] = useState('');
 
-  const { data: market, isLoading, isError } = useMarket(id);
+  const { data: market, isLoading, isError } = useMarket(id, question);
 
   const { config, remainingFree, isPro, requestAnalysis } = useAdMonetisation();
   const [showPaywall, setShowPaywall] = useState(false);
@@ -197,6 +197,21 @@ export default function MarketDetailScreen() {
                 />
               </View>
               <BulletList bullets={analysis.bullets} kellyWarning={analysis.kelly_pct <= 0} />
+
+              {/* Action button — only shown for BUY/STRONG_BUY signals */}
+              {(analysis.verdict === 'STRONG_BUY' || analysis.verdict === 'BUY') && (
+                <TouchableOpacity
+                  style={styles.betBtn}
+                  onPress={() => Linking.openURL(`https://polymarket.com/event/${market!.id}`)}
+                  activeOpacity={0.8}
+                >
+                  <Ionicons name="open-outline" size={16} color="#08080F" />
+                  <Text style={styles.betBtnText}>
+                    Bet {analysis.recommended_outcome ?? 'YES'} on Polymarket
+                  </Text>
+                </TouchableOpacity>
+              )}
+
               <TouchableOpacity
                 style={styles.regenerateBtn}
                 onPress={() => { setAnalysis(null); setAnalysisState('idle'); }}
@@ -401,7 +416,19 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
 
-  regenerateBtn: { marginTop: 16, alignSelf: 'flex-end' },
+  betBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginTop: 16,
+    backgroundColor: '#00D4AA',
+    borderRadius: 12,
+    paddingVertical: 14,
+  },
+  betBtnText: { fontSize: 15, fontWeight: '700', color: '#08080F' },
+
+  regenerateBtn: { marginTop: 12, alignSelf: 'flex-end' },
   regenerateBtnText: { fontSize: 12, color: '#7A7A9A', textDecorationLine: 'underline' },
 
   chartHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },

@@ -68,50 +68,54 @@ function enrichPick(pick: any, smartMoneyPct: number): any {
   const confidence  = pick.confidenceScore ?? 50;
   const smart       = smartMoneyPct ?? 50;
 
-  // Verdict
-  let verdict = 'NEUTRAL';
-  if (confidence > 80 && smart > 70) verdict = 'STRONG_BUY';
-  else if (confidence > 65) verdict = 'BUY';
-  else if (confidence > 50) verdict = 'NEUTRAL';
-  else if (confidence > 35) verdict = 'AVOID';
-  else verdict = 'STRONG_AVOID';
+  // Edge — positive = undervalued (BUY), negative = overvalued (AVOID)
+  const edge_pct   = confidence - yesPricePct;
+  const edge_label = edge_pct > 5  ? 'UNDERVALUED' :
+                     edge_pct < -5 ? 'OVERVALUED'  : 'FAIR VALUE';
 
-  // Kelly
+  // Verdict is driven by edge + confidence together — never contradicts edge sign.
+  // Thresholds use relative confidence (edge magnitude matters more than raw score).
+  let verdict: string;
+  if      (edge_pct > 20 && confidence > 55) verdict = 'STRONG_BUY';
+  else if (edge_pct > 10 && confidence > 35) verdict = 'BUY';
+  else if (edge_pct > 0)                     verdict = 'NEUTRAL';
+  else if (edge_pct < -20)                   verdict = 'STRONG_AVOID';
+  else if (edge_pct < -10)                   verdict = 'AVOID';
+  else                                       verdict = 'NEUTRAL';
+
+  // Kelly criterion (only meaningful for BUY verdicts)
   const p         = confidence / 100;
   const yes_price = pick.currentYesPrice ?? 0.5;
   const b         = (1 / yes_price) - 1;
   const kelly     = (p * (b + 1) - 1) / b;
   const kelly_pct = Math.max(0, Math.min(25, kelly * 100));
 
-  // Edge
-  const edge_pct   = confidence - yesPricePct;
-  const edge_label = edge_pct > 5  ? 'UNDERVALUED' :
-                     edge_pct < -5 ? 'OVERVALUED'  : 'FAIR VALUE';
-
   // Risk
   const risk_level = kelly_pct > 10 ? 'LOW' :
                      kelly_pct > 3  ? 'MEDIUM' : 'HIGH';
 
-  // Bullets derived from signals
+  // Single best insight bullet
   const bullets = [
-    confidence > 70 ? 'Strong model confidence' : 'Moderate confidence signal',
-    smart > 65
-      ? `${Math.round(smart)}% smart money aligned`
-      : 'Mixed smart money signal',
     edge_pct > 5
-      ? `Market undervaluing by ${edge_pct.toFixed(1)}%`
-      : 'Odds near fair value',
+      ? `Market pricing YES ${edge_pct.toFixed(0)}% below our estimate`
+      : edge_pct < -5
+        ? `Market pricing YES ${Math.abs(edge_pct).toFixed(0)}% above our estimate`
+        : 'Odds near fair value — no clear edge',
+    smart > 65
+      ? `${Math.round(smart)}% of tracked wallets backing this side`
+      : 'Insufficient smart money signal',
+    confidence > 70 ? 'High model confidence' : 'Moderate model confidence',
   ];
 
   return {
     ...pick,
     verdict,
-    kelly_pct:        Math.round(kelly_pct * 10) / 10,
-    edge_pct:         Math.round(edge_pct  * 10) / 10,
+    kelly_pct:         Math.round(kelly_pct * 10) / 10,
+    edge_pct:          Math.round(edge_pct  * 10) / 10,
     edge_label,
     risk_level,
     reasoning_bullets: bullets,
-    ai_probability:   confidence,
+    ai_probability:    confidence,
   };
 }
 
@@ -193,17 +197,23 @@ export class DailyPicksEngine {
       const data = await response.json();
 
       // Transform Gamma API format to our Market interface
+      const parseJsonField = (v: any, fallback: any) => {
+        if (Array.isArray(v)) return v;
+        if (typeof v === 'string') { try { return JSON.parse(v); } catch {} }
+        return fallback;
+      };
+
       return data.map((market: any) => ({
         id: market.id,
         question: market.question,
         description: market.description,
-        outcomes: market.outcomes || ['Yes', 'No'],
-        outcomePrices: market.outcomePrices || [0.5, 0.5],
+        outcomes: parseJsonField(market.outcomes, ['Yes', 'No']),
+        outcomePrices: parseJsonField(market.outcomePrices, [0.5, 0.5]),
         volume24h: parseFloat(market.volume24hr || '0'),
         volumeTotal: parseFloat(market.volumeTotal || '0'),
         endDate: market.endDate,
         category: market.category,
-        tags: market.tags || [],
+        tags: parseJsonField(market.tags, []),
         active: market.active !== false,
         closed: market.closed === true
       }));
@@ -222,8 +232,18 @@ export class DailyPicksEngine {
       // Must be active and not closed
       if (!market.active || market.closed) return false;
 
-      // Must have > $100k volume
-      if (market.volume24h < 100000) return false;
+      // Must have > $500 24h volume
+      if (market.volume24h < 500) return false;
+
+      // Exclude low-credibility entertainment/gaming markets unless very high volume
+      const cat = (market.category ?? '').toLowerCase();
+      const isEntertainment = ['gaming', 'entertainment', 'music', 'celebrity', 'tv', 'film', 'movies'].includes(cat);
+      if (isEntertainment && market.volume24h < 1_000_000) return false;
+
+      // Also exclude by question keywords that indicate entertainment with low analytical edge
+      const q = (market.question ?? '').toLowerCase();
+      const entertainmentKeywords = ['gta vi', 'gta6', 'album', 'taylor swift', 'beyoncé', 'kanye', 'drake', 'rihanna', 'carti', 'playboi'];
+      if (entertainmentKeywords.some(kw => q.includes(kw)) && market.volume24h < 1_000_000) return false;
 
       // Must end in more than 3 days
       const endDate = new Date(market.endDate);
@@ -358,14 +378,21 @@ export class DailyPicksEngine {
       const smartMoney = smartMoneyAnalyses.get(market.id);
       const aiBrief = aiBriefs.get(market.id) || 'Market analysis pending.';
       const yesPrice = market.outcomePrices[0] || 0.5;
+      const yesPricePct = yesPrice * 100;
 
-      // Determine recommendation based on price and smart money
+      // Edge: positive = market underpricing YES → BET YES
+      //       negative = market overpricing YES → BET NO
+      const edgePct = market.confidenceScore - yesPricePct;
+
+      // recommendedOutcome MUST align with edge direction — no contradictions
       let recommendedOutcome: 'YES' | 'NO';
-
-      if (smartMoney && smartMoney.direction !== 'MIXED') {
+      if (edgePct > 5) {
+        recommendedOutcome = 'YES'; // market underpricing YES
+      } else if (edgePct < -5) {
+        recommendedOutcome = 'NO';  // market overpricing YES → NO is value
+      } else if (smartMoney && smartMoney.direction !== 'MIXED') {
         recommendedOutcome = smartMoney.direction;
       } else {
-        // Fall back to price signal
         recommendedOutcome = yesPrice > 0.5 ? 'YES' : 'NO';
       }
 

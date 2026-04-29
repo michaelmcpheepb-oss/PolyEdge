@@ -82,25 +82,24 @@ export function TraderCard({ trader, rank, isFollowing = false, onFollowToggle }
         
         {/* Trader Info */}
         <View style={styles.traderInfo}>
-          <Text style={styles.pseudonym} numberOfLines={1}>
+          <Text style={styles.pseudonym} numberOfLines={1} ellipsizeMode="tail">
             {trader.pseudonym}
           </Text>
           <Text style={styles.walletAddress} numberOfLines={1}>
-            {trader.wallet_address.slice(0, 6)}...{trader.wallet_address.slice(-4)}
+            {trader.wallet_address.slice(0, 6)}…{trader.wallet_address.slice(-4)}
           </Text>
-          <View style={styles.statsRow}>
-            <Text style={styles.winRate}>
-              {trader.win_rate}% win rate
-            </Text>
-            <Text style={styles.totalTrades}>
-              {trader.total_trades} trades
-            </Text>
-          </View>
+          <Text style={[styles.winRate, {
+            color: trader.win_rate >= 60 ? Colors.success
+                 : trader.win_rate >= 45 ? Colors.warning ?? '#FFD700'
+                 : Colors.error,
+          }]}>
+            {trader.win_rate}% win rate
+          </Text>
         </View>
-        
+
         {/* PnL */}
         <View style={styles.pnlContainer}>
-          <Text style={[styles.pnl, { color: pnlInfo.color }]}>
+          <Text style={[styles.pnl, { color: pnlInfo.color }]} numberOfLines={1}>
             {pnlInfo.formatted}
           </Text>
           <Text style={styles.pnlLabel}>30d PnL</Text>
@@ -128,76 +127,68 @@ export function TraderCard({ trader, rank, isFollowing = false, onFollowToggle }
 const styles = StyleSheet.create({
   container: {
     backgroundColor: Colors.surface,
-    borderRadius: 12,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    overflow: 'hidden',
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+    minHeight: 64,
   },
   content: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
   },
   rankContainer: {
-    width: 32,
+    width: 28,
     alignItems: 'center',
-    marginRight: 12,
+    marginRight: 8,
   },
   rank: {
     fontSize: 20,
     fontWeight: '700',
   },
   avatarContainer: {
-    marginRight: 12,
+    marginRight: 10,
   },
   avatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: Colors.accent,
     justifyContent: 'center',
     alignItems: 'center',
   },
   avatarText: {
-    fontSize: 18,
+    fontSize: 15,
     fontWeight: '700',
     color: Colors.background,
   },
   traderInfo: {
     flex: 1,
-    marginRight: 12,
+    marginRight: 8,
+    minWidth: 0,
   },
   pseudonym: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
     color: Colors.textPrimary,
-    marginBottom: 2,
+    marginBottom: 1,
   },
   walletAddress: {
-    fontSize: 12,
+    fontSize: 11,
     color: Colors.textTertiary,
-    marginBottom: 6,
-  },
-  statsRow: {
-    flexDirection: 'row',
-    gap: 12,
+    marginBottom: 2,
   },
   winRate: {
     fontSize: 12,
-    color: Colors.success,
     fontWeight: '500',
-  },
-  totalTrades: {
-    fontSize: 12,
-    color: Colors.textSecondary,
   },
   pnlContainer: {
     alignItems: 'flex-end',
-    marginRight: 12,
+    marginRight: 8,
+    minWidth: 60,
   },
   pnl: {
-    fontSize: 18,
+    fontSize: 15,
     fontWeight: '700',
     marginBottom: 2,
   },

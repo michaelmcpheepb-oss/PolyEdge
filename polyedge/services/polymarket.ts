@@ -442,14 +442,14 @@ export async function getTraders(options?: {
   }
 }
 
-export async function getMarketById(marketId: string): Promise<Market | null> {
-  // 1. Try Supabase first (covers upserted markets)
+export async function getMarketById(marketId: string, question?: string): Promise<Market | null> {
+  // 1. Try Supabase markets table by exact ID
   try {
     const { data } = await supabase.from('markets').select('*').eq('id', marketId).single();
     if (data) return data;
   } catch {}
 
-  // 2. Try Polymarket Gamma API directly
+  // 2. Try Polymarket Gamma API by exact ID
   try {
     const res = await fetch(`${POLYMARKET_GAMMA_API}/markets/${marketId}`);
     if (res.ok) {
@@ -472,7 +472,66 @@ export async function getMarketById(marketId: string): Promise<Market | null> {
     }
   } catch {}
 
-  // 3. Synthesize from daily_picks row (for seeded test markets)
+  // 3. Search Gamma API by question text (when ID is internal/seeded)
+  if (question) {
+    try {
+      const q = encodeURIComponent(question.slice(0, 120));
+      const res = await fetch(`${POLYMARKET_GAMMA_API}/markets?question=${q}&limit=5&active=true`);
+      if (res.ok) {
+        const items: any[] = await res.json();
+        // Pick best match: exact question or highest volume
+        const match = items.find(
+          (m) => m.question?.toLowerCase() === question.toLowerCase()
+        ) ?? items[0];
+        if (match) {
+          const prices = match.outcomePrices ?? [];
+          return {
+            id: match.id,
+            question: match.question ?? question,
+            category: match.category ?? (match.tags?.[0] ?? 'General'),
+            yes_price: parseFloat(prices[0] ?? '0.5') || 0.5,
+            no_price:  parseFloat(prices[1] ?? '0.5') || 0.5,
+            volume_24h:   parseFloat(match.volume24hr ?? match.volume ?? '0') || 0,
+            total_volume: parseFloat(match.volumeTotal ?? match.volume ?? '0') || 0,
+            end_date:   match.endDate ?? new Date(Date.now() + 30 * 86400000).toISOString(),
+            description: match.description ?? '',
+            updated_at: new Date().toISOString(),
+            image: match.image ?? match.icon ?? null,
+            condition_id: match.conditionId ?? null,
+          };
+        }
+      }
+    } catch {}
+
+    // 4. Synthesize from daily_picks using question text (last resort)
+    try {
+      const { data: pick } = await supabase
+        .from('daily_picks')
+        .select('*')
+        .ilike('market_question', question.slice(0, 80))
+        .order('pick_date', { ascending: false })
+        .limit(1)
+        .single();
+      if (pick) {
+        return {
+          id: pick.market_id,
+          question:     pick.market_question,
+          category:     pick.category ?? 'General',
+          yes_price:    pick.current_yes_price ?? 0.5,
+          no_price:     pick.current_no_price  ?? 0.5,
+          volume_24h:   0,
+          total_volume: 0,
+          end_date:     new Date(Date.now() + 30 * 86400000).toISOString(),
+          description:  pick.ai_reasoning ?? '',
+          updated_at:   pick.created_at ?? new Date().toISOString(),
+          image:        undefined,
+          condition_id: undefined,
+        };
+      }
+    } catch {}
+  }
+
+  // 5. Synthesize from daily_picks by market_id
   try {
     const { data: pick } = await supabase
       .from('daily_picks')
