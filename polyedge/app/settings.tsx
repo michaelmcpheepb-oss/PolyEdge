@@ -11,37 +11,6 @@ import * as WebBrowser from 'expo-web-browser';
 export default function SettingsScreen() {
   const router = useRouter();
   const { user, signOut, showAuthSheet } = useUserStore();
-  
-  // If no user, show sign in prompt
-  if (!user) {
-    return (
-      <SafeAreaView style={styles.container} edges={['top']}>
-        <View style={styles.header}>
-          <TouchableOpacity 
-            style={styles.backButton}
-            onPress={() => router.back()}
-          >
-            <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
-          </TouchableOpacity>
-          <View style={styles.headerTitle}>
-            <Text style={styles.headerTitleText}>Settings</Text>
-          </View>
-          <View style={styles.headerRight} />
-        </View>
-        
-        <View style={styles.signInPromptContainer}>
-          <Ionicons name="person-circle-outline" size={64} color={Colors.textSecondary} />
-          <Text style={styles.signInPromptTitle}>Sign In Required</Text>
-          <Text style={styles.signInPromptText}>
-            Please sign in to access settings and save your preferences
-          </Text>
-          <TouchableOpacity style={styles.signInPromptButton} onPress={showAuthSheet}>
-            <Text style={styles.signInPromptButtonText}>Sign In</Text>
-          </TouchableOpacity>
-        </View>
-      </SafeAreaView>
-    );
-  }
   const { 
     categories, 
     whaleThreshold, 

@@ -49,7 +49,7 @@ function SettingRow({ icon, label, subtitle, onPress, rightElement, destructive 
 }
 
 export default function ProfileScreen() {
-  const { user, signOut } = useUserStore();
+  const { user, signOut, showAuthSheet } = useUserStore();
   const { whaleThreshold, categories, setWhaleThreshold } = usePreferencesStore();
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
 
@@ -88,7 +88,7 @@ export default function ProfileScreen() {
         <Text style={styles.profileEmail}>{user?.email || 'Not signed in'}</Text>
       </View>
       {!user && (
-        <Pressable style={styles.signInButton} onPress={() => {}}>
+        <Pressable style={styles.signInButton} onPress={showAuthSheet}>
           <Text style={styles.signInText}>Sign In</Text>
         </Pressable>
       )}

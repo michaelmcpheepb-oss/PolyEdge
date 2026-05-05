@@ -1,3 +1,4 @@
+import { Platform } from 'react-native'
 import { supabase } from '../lib/supabase'
 
 export async function sendMagicLink(email: string) {
@@ -6,7 +7,9 @@ export async function sendMagicLink(email: string) {
   const { error } = await supabase.auth.signInWithOtp({
     email,
     options: {
-      emailRedirectTo: 'polyedge://auth/callback',
+      emailRedirectTo: Platform.OS === 'web'
+        ? 'http://localhost:3000'
+        : 'polyedge://auth/callback',
     },
   });
   

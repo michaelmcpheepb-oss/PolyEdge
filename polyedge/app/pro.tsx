@@ -73,14 +73,11 @@ export default function ProScreen() {
       return;
     }
 
-    if (!user) {
-      Alert.alert('Sign In Required', 'Please sign in to start your free trial.');
-      return;
-    }
+    const userId = user?.id ?? 'guest_' + Date.now();
 
     setIsProcessing(true);
     try {
-      await openStripeCheckout(selectedPlan, user.id);
+      await openStripeCheckout(selectedPlan, userId);
       Alert.alert(
         'Checkout Started',
         'Complete your purchase in the browser window that opened.',
